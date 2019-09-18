@@ -3,6 +3,12 @@ uuid = "dbf0e0cf-d002-4d20-9fd3-93cd71fe1271"
 authors = ["scott <scott.stanie@gmail.com>"]
 version = "0.1.0"
 
+[deps]
+Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
+Glob = "c27321d9-0574-5035-807b-f59d2c89b15c"
+HDF5 = "f67ccb44-e63f-5c2f-98bd-6dc0ccc4ba2f"
+PyCall = "438e738f-606a-5dbb-bf0a-cddfbfd45ab0"
+
 [compat]
 julia = "1"
 
