@@ -36,7 +36,10 @@ const BOOL_EXTS = [".mask"]
 const LOAD_IN_PYTHON = vcat(IMAGE_EXTS, [".geojson", ".npy"])
 
 # For HDF5 saving
+const DEM_RSC_DSET = "dem_rsc"
 const STACK_DSET = "stack"
+const GEOLIST_DSET = "geo_dates"
+const INTLIST_DSET = "int_dates"
 
 find_files(ext, directory=".") = sort(Glob.glob("*"*ext, directory))
 
@@ -196,7 +199,7 @@ function _load_bin_matrix(filename, rsc_data, dtype, do_permute::Bool)
 end
 
 """Get the composite mask from the stack, true only where ALL pixels are masked"""
-function load_mask(do_permute=true, fname=MASK_FILENAME, dset=GEO_MASK_SUM_DSET)
+function load_mask(do_permute=true, fname="masks.h5", dset="geo_sum")
     mask = h5read(fname, dset)
     return do_permute ? permutedims(mask .== maximum(mask)) : mask .== maximum(mask)
 end
