@@ -8,7 +8,7 @@ module Sario
 
 export load, loac_stack, load_hdf5_stack, get_file_ext, find_files, 
        load_geolist_from_h5, load_intlist_from_h5,
-       save_hdf5_stack, save_deformation, save_reference
+       save, save_hdf5_stack, save_deformation, save_reference
 
 # Include apertools Python modeules here to make available to all
 using PyCall
