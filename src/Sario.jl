@@ -22,6 +22,7 @@ import Glob
 using HDF5
 using Dates
 
+const DATE_FMT = "yyyymmdd"
 const SENTINEL_EXTS = [".geo", ".cc", ".int", ".amp", ".unw", ".unwflat"]
 const COMPLEX_EXTS = [".int", ".slc", ".geo", ".cc", ".unw", ".unwflat", ".mlc", ".grd"]
 const REAL_EXTS = [".amp", ".cor", ".mlc", ".grd"]
