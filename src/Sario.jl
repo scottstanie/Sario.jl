@@ -127,7 +127,8 @@ function load(filename::AbstractString, idxs::RangeTuple;
               rsc_file::Union{AbstractString, Nothing}=nothing,  do_permute=true)
     data_type, rsc_data, num_rows, num_cols = _file_info(filename, rsc_file)
 
-    rows, cols = idxs
+    # Note: reversing these since julia uses column-major
+    cols, rows = idxs
     _check_bounds(rows.start, cols.start, num_rows, num_cols)
     
     outrows = rows.stop  - rows.start + 1
