@@ -316,7 +316,7 @@ end
 
 # If loading only certain layers, don't read all into memory
 function load_hdf5_stack(h5file::AbstractString, dset_name::AbstractString, valid_layer_idxs)
-    nrows, ncols, _ = size(h5file, dset)
+    nrows, ncols, _ = size(h5file, dset_name)
     h5open(h5file) do f
         dset = f[dset_name]
         out = Array{eltype(dset), ndims(dset)}(undef, (nrows, ncols, length(valid_layer_idxs)))
