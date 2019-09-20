@@ -1,0 +1,11 @@
+WIDTH         6
+FILE_LENGTH   5
+X_FIRST       -103.452222223756
+Y_FIRST       31.859166667061
+X_STEP        0.000027777778
+Y_STEP        -0.000027777778
+X_UNIT        degrees
+Y_UNIT        degrees
+Z_OFFSET      0
+Z_SCALE       1
+PROJECTION    LL
