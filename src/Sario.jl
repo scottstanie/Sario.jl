@@ -91,15 +91,11 @@ end
 """Load one element of a file on disk (avoid reading in all of huge file"""
 # TODO: Load a chunk of a file now?
 function load(filename::AbstractString, row_col::Tuple{Int, Int}; rsc_file::Union{AbstractString, Nothing}=nothing)
-    data_type = _get_data_type(filename)
-
-    rsc_data = _get_rsc_data(filename, rsc_file)
-    num_rows, num_cols = rsc_data["file_length"], rsc_data["width"]
+    data_type, rsc_data, num_rows, num_cols = _file_info(filename, rsc_file)
 
     row, col = row_col
-    if row < 1 || col < 1 || row > num_rows || col > num_cols
-        throw(DomainError((row, col), " out of bounds for $filename of size ($num_rows, $num_cols)"))
-    end
+    _check_bounds(row, col, num_rows, num_cols)
+
     seek_pos = _get_seek_position(row, col, num_cols, data_type)
     
     open(filename) do f
@@ -112,21 +108,27 @@ end
 """For single element reading in binary files, seek to the right row, col"""
 _get_seek_position(row, col, num_cols, data_type) = sizeof(data_type) * ((col - 1) + (num_cols * (row - 1)) )
 
+function _check_bounds(row, col, num_rows, num_cols)
+    if row < 1 || col < 1 || row > num_rows || col > num_cols
+        throw(DomainError((row, col), " out of bounds for $filename of size ($num_rows, $num_cols)"))
+    end
+end
+function _file_info(filename, rsc_file)
+    data_type = _get_data_type(filename)
+    rsc_data = _get_rsc_data(filename, rsc_file)
+    num_rows, num_cols = rsc_data["file_length"], rsc_data["width"]
+    return data_type, rsc_data, num_rows, num_cols
+end
 
 # NOTE: the subset will only work for sequential data (complex), not the stacked filetypes
 """Load subset of a file on disk using range"""
 RangeTuple = Tuple{T, T} where { T <: OrdinalRange }
-function load(filename::AbstractString, idxs::RangeTuple, rsc_file::Union{AbstractString, Nothing}=nothing)
-    # TODO: extract these two starts
-    data_type = _get_data_type(filename)
-
-    rsc_data = _get_rsc_data(filename, rsc_file)
-    num_rows, num_cols = rsc_data["file_length"], rsc_data["width"]
+function load(filename::AbstractString, idxs::RangeTuple; 
+              rsc_file::Union{AbstractString, Nothing}=nothing,  do_permute=true)
+    data_type, rsc_data, num_rows, num_cols = _file_info(filename, rsc_file)
 
     rows, cols = idxs
-    if rows.start < 1 || cols.start < 1 || rows.stop > num_rows || cols.stop > num_cols
-        throw(DomainError((rows, cols), " out of bounds for $filename of size ($num_rows, $num_cols)"))
-    end
+    _check_bounds(rows.start, cols.start, num_rows, num_cols)
     
     outrows = rows.stop  - rows.start + 1
     outcols = cols.stop  - cols.start + 1
@@ -143,7 +145,7 @@ function load(filename::AbstractString, idxs::RangeTuple, rsc_file::Union{Abstra
             out[:, idx] .= buf  
         end
     end
-    return out
+    return do_permute ? permutedims(out) : out
 end
 
 function _get_rsc_data(filename, rsc_file)
