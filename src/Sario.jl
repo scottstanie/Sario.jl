@@ -113,6 +113,39 @@ end
 _get_seek_position(row, col, num_cols, data_type) = sizeof(data_type) * ((col - 1) + (num_cols * (row - 1)) )
 
 
+# NOTE: the subset will only work for sequential data (complex), not the stacked filetypes
+"""Load subset of a file on disk using range"""
+RangeTuple = Tuple{T, T} where { T <: OrdinalRange }
+function load(filename::AbstractString, idxs::RangeTuple, rsc_file::Union{AbstractString, Nothing}=nothing)
+    # TODO: extract these two starts
+    data_type = _get_data_type(filename)
+
+    rsc_data = _get_rsc_data(filename, rsc_file)
+    num_rows, num_cols = rsc_data["file_length"], rsc_data["width"]
+
+    rows, cols = idxs
+    if rows.start < 1 || cols.start < 1 || rows.stop > num_rows || cols.stop > num_cols
+        throw(DomainError((rows, cols), " out of bounds for $filename of size ($num_rows, $num_cols)"))
+    end
+    
+    outrows = rows.stop  - rows.start + 1
+    outcols = cols.stop  - cols.start + 1
+    out = zeros(data_type, (outrows, outcols))
+    buf = zeros(data_type, outcols)
+
+    open(filename) do f
+        for (idx, r) in enumerate(rows)
+            seek_pos = _get_seek_position(r, cols.start, num_cols, data_type)
+            seek(f, seek_pos)
+            # This read syntax loads single `data_type`
+            # read!(out[r, :], f, data_type)
+            read!(f, buf)
+            out[:, idx] .= buf  
+        end
+    end
+    return out
+end
+
 function _get_rsc_data(filename, rsc_file)
     ext = get_file_ext(filename)
 
