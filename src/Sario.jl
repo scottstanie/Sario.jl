@@ -19,6 +19,7 @@ function __init__()
 end
 
 import Glob
+import JSON
 using HDF5
 using Dates
 
@@ -273,6 +274,7 @@ end
 function load_geolist_from_h5(h5file::AbstractString)
     h5open(h5file) do f
         geo_strings = read(f, GEOLIST_DSET)
+        # TODO: bring this here... might even be able to directly pass callable to `read`
         return pysario.parse_geolist_strings(geo_strings)
     end
 end
@@ -287,13 +289,37 @@ function load_intlist_from_h5(h5file)
     end
 end
 
-function save_geolist_to_h5(h5file, geolist; overwrite=false)
+import Base.string
+string(arr::Array{Date}, fmt="yyyymmdd") = Dates.format.(arr, fmt)
+
+"""Save the geolist as a list of strings to an dataset `h5file`"""
+function save_geolist_to_h5(h5file::String, geolist::AbstractArray{Date}; overwrite=false)
     h5open(h5file, "cw") do f
         # Delete if exists
         overwrite && GEOLIST_DSET in names(f) && o_delete(f, GEOLIST_DSET)
 
-        geo_strings = Dates.format.(geolist, DATE_FMT)
-        write(f, GEOLIST_DSET, geo_strings)
+        write(f, GEOLIST_DSET, string(geolist))
+    end
+end
+
+"""In this version, save the geolist to an attribute of `object` already in `h5file`"""
+function save_geolist_to_h5(h5file::String, object::String, geolist::AbstractArray{Date}; overwrite=false)
+    h5open(h5file, "cw") do f
+        obj = f[object]
+        # Delete if exists
+        overwrite && exists(attrs(obj), GEOLIST_DSET) && a_delete(obj, GEOLIST_DSET)
+
+        attrs(obj)[GEOLIST_DSET] = string(geolist)
+    end
+end
+
+load_dem_from_h5(h5file, dset=DEM_RSC_DSET) = JSON.parse(h5read(h5file, dset))
+
+function save_dem_to_h5(h5file, dem_rsc, dset_name=DEM_RSC_DSET; overwrite=true)
+    h5open(h5file, "cw") do f
+        overwrite && dset_name in names(f) && o_delete(f, dset_name)
+
+        write(f, dset_name, JSON.json(dem_rsc))
     end
 end
 
