@@ -297,13 +297,9 @@ function save_geolist_to_h5(h5file, geolist; overwrite=false)
     end
 end
 
-function save_hdf5_stack(h5file::AbstractString, dset_name::AbstractString, stack; overwrite::Bool=true, do_permute=true)
+function save_hdf5_stack(h5file::AbstractString, dset_name::AbstractString, stack; overwrite::Bool=false, do_permute=true)
     # TODO: is there a way to combine this with normal saving of files?
-    if overwrite
-        mode = "w"
-    else
-        mode = "cw"  # Append mode  (why different than "a"?)
-    end
+    mode = overwrite ? "w" : "cw"  # Append mode is 'cw'  (why different than "a"?) 
     h5open(h5file, mode) do f 
         do_permute ? write(f, dset_name, permutedims(stack, (2, 1, 3))) :
                      write(f, dset_name, stack)
