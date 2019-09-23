@@ -238,7 +238,8 @@ end
 """Get the composite mask from the stack, true only where ALL pixels are masked"""
 function load_mask(do_permute=true, fname="masks.h5", dset="geo_sum")
     mask = h5read(fname, dset)
-    return do_permute ? permutedims(mask .== maximum(mask)) : mask .== maximum(mask)
+    mval = max(1, maximum(mask))  # Make sure we dont mask all 0s
+    return do_permute ? permutedims(mask .== mval) : mask .== mval
 end
 
 
