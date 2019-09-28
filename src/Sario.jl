@@ -438,14 +438,15 @@ end
 # end
 
 
-function save(filename::AbstractString, array ; kwargs...)
+function save(filename::AbstractString, array; do_permute=true)
     ext = get_file_ext(filename)
 
     if ext in BOOL_EXTS
-        tofile(filename, array, kwargs...)
+        tofile(filename, array, do_permute=do_permute)
     elseif (ext in vcat(COMPLEX_EXTS, REAL_EXTS, ELEVATION_EXTS)) && (!(ext in STACKED_FILES))
-        tofile(filename, _force_float32(array), kwargs...)
+        tofile(filename, _force_float32(array), do_permute=do_permute)
     elseif ext in STACKED_FILES
+        # TODO: ?? For stacked, we might have to take care of permute earlier
         # ndims(array) != 3 && throw(DimensionMismatch("array must be 3D [amp; data] to save as $filename"))
         if ndims(array) == 3
             amp = view(array, :, :, 1)
@@ -455,9 +456,9 @@ function save(filename::AbstractString, array ; kwargs...)
             data = array
             amp = ones(size(array))
         end
-        tofile(filename, _force_float32(hcat(amp, data)))
+        tofile(filename, _force_float32(hcat(amp, data)), permutedims=true)
     else
-        pysario.save(filename, array, kwargs...)
+        pysario.save(filename, array)
     end
 end
 
