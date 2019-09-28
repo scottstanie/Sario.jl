@@ -438,7 +438,7 @@ end
 # end
 
 
-function save(filename::AbstractString, array; do_permute=true)
+function save(filename::AbstractString, array; do_permute=true, kwargs...)
     ext = get_file_ext(filename)
 
     if ext in BOOL_EXTS
