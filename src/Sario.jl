@@ -455,11 +455,9 @@ function save(filename::AbstractString, array; do_permute=true)
             data = array
             amp = ones(size(array))
         end
-        if do_permute
-            amp = transpose(amp)
-            data = transpose(data)
-        end
-        tofile(filename, _force_float32(hcat(amp, data)), do_permute=true)
+        # Handle the permuting for stacked here outside of function
+        out = do_permute ? transpose(hcat(amp, data)) : vcat(amp, data)
+        tofile(filename, _force_float32(out), do_permute=false)
     else
         pysario.save(filename, array)
     end
