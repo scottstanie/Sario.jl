@@ -446,23 +446,26 @@ function save(filename::AbstractString, array; do_permute=true)
     elseif (ext in vcat(COMPLEX_EXTS, REAL_EXTS, ELEVATION_EXTS)) && (!(ext in STACKED_FILES))
         tofile(filename, _force_float32(array), do_permute=do_permute)
     elseif ext in STACKED_FILES
-        # TODO: ?? For stacked, we might have to take care of permute earlier
         # ndims(array) != 3 && throw(DimensionMismatch("array must be 3D [amp; data] to save as $filename"))
         if ndims(array) == 3
             amp = view(array, :, :, 1)
             data = view(array, :, :, 2)
         else
-            println("Warning: saving $filename with 1s for amplitude")
+            println("!!! Warning: saving $filename with 1s for amplitude")
             data = array
             amp = ones(size(array))
         end
-        tofile(filename, _force_float32(hcat(amp, data)), permutedims=true)
+        if do_permute
+            amp = transpose(amp)
+            data = transpose(data)
+        end
+        tofile(filename, _force_float32(hcat(amp, data)), do_permute=true)
     else
         pysario.save(filename, array)
     end
 end
 
-function tofile(filename, array, do_permute=true)  #, overwrite=true)
+function tofile(filename, array; do_permute=true)  #, overwrite=true)
     # mode = overwrite ? "w" : "a"
     mode = "w"
     open(filename, mode) do f 
