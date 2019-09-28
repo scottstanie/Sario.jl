@@ -5,9 +5,12 @@ version = "0.1.0"
 
 [deps]
 Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
+GeoJSON = "61d90e0f-e114-555e-ac52-39dfb47a3ef9"
 Glob = "c27321d9-0574-5035-807b-f59d2c89b15c"
 HDF5 = "f67ccb44-e63f-5c2f-98bd-6dc0ccc4ba2f"
+IterTools = "c8e1da08-722c-5040-9ed9-7db0dc04731e"
 JSON = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
+NPZ = "15e1cf62-19b3-5cfa-8e77-841668bca605"
 PyCall = "438e738f-606a-5dbb-bf0a-cddfbfd45ab0"
 
 [compat]

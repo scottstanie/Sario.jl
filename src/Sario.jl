@@ -17,6 +17,12 @@ function __init__()
     # TODO: remove all the backups so we don't need this...
     copy!(pysario, pyimport("apertools.sario"))
 end
+# TODO: python transfers:
+# /data1/scott/pecos/path78-bbox2/igrams_looked/
+# rsc_file = pysario.find_rsc_file(filename)
+# rsc_data = pysario.load(rsc_file)
+# const LOAD_IN_PYTHON = vcat(IMAGE_EXTS, [".geojson", ".npy"])
+# GeoJSON.geo2dict(GeoJSON.parsefile("../../bbox2.geojson"))["coordinates"]
 
 import Glob
 import JSON
@@ -438,7 +444,7 @@ function save(filename::AbstractString, array ; kwargs...)
     if ext in BOOL_EXTS
         tofile(filename, array, kwargs...)
     elseif (ext in vcat(COMPLEX_EXTS, REAL_EXTS, ELEVATION_EXTS)) && (!(ext in STACKED_FILES))
-        tofile(filename, _force_float32(array))
+        tofile(filename, _force_float32(array), kwargs...)
     elseif ext in STACKED_FILES
         # ndims(array) != 3 && throw(DimensionMismatch("array must be 3D [amp; data] to save as $filename"))
         if ndims(array) == 3
