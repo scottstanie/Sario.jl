@@ -52,7 +52,6 @@ find_files(ext, directory=".") = sort(Glob.glob("*"*ext, directory))
 
 """Extracts the file extension, including the "." (e.g.: .slc)"""
 get_file_ext(filename::AbstractString) = splitext(filename)[end]
-find_rsc_file = pysario.find_rsc_file
 
 
 import Base.size
@@ -164,7 +163,7 @@ function _get_rsc_data(filename, rsc_file)
     if !isnothing(rsc_file)
         rsc_data = pysario.load(rsc_file)
     elseif ext in vcat(SENTINEL_EXTS, ELEVATION_EXTS, BOOL_EXTS)
-        rsc_file = find_rsc_file(filename)
+        rsc_file = pysario.find_rsc_file(filename)
         rsc_data = pysario.load(rsc_file)
     end
 
@@ -205,7 +204,7 @@ function load_elevation(filename; do_permute=true)
     data_type = Int16 
 
     if ext == ".dem"
-        rsc_file = find_rsc_file(filename)
+        rsc_file = pysario.find_rsc_file(filename)
         dem_rsc = pysario.load(rsc_file)
         rows, cols = (dem_rsc["file_length"], dem_rsc["width"])
         data = Array{data_type, 2}(undef, (cols, rows))
@@ -373,7 +372,7 @@ function load_stack(; file_list::Union{Array{AbstractString}, Nothing}=nothing,
         file_list = find_files(file_ext, directory)
     end
 
-    # rsc_data = pysario.load(find_rsc_file(basepath=directory))
+    # rsc_data = pysario.load(pysario.find_rsc_file(basepath=directory))
     test_arr = load(file_list[1])
     rows, cols = size(test_arr)
     T = eltype(test_arr)
