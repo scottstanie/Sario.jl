@@ -84,7 +84,8 @@ function load(filename::AbstractString; rsc_file::Union{AbstractString, Nothing}
     rsc_data = _get_rsc_data(filename, rsc_file)
 
     if ext in STACKED_FILES
-        return take_looks(load_stacked_img(filename, rsc_data, do_permute=do_permute, return_amp=return_amp), looks...)
+        return take_looks(load_stacked_img(filename, rsc_data, do_permute=do_permute, return_amp=return_amp),
+                          looks...)
     elseif ext in BOOL_EXTS
         return take_looks(load_bool(filename, rsc_data, do_permute=do_permute), looks...)
     else
@@ -297,7 +298,7 @@ function load_intlist_from_h5(h5file)
 end
 
 import Base.string
-string(arr::Array{Date}, fmt="yyyymmdd") = Dates.format.(arr, fmt)
+string(arr::AbstractArray{Date}, fmt="yyyymmdd") = Dates.format.(arr, fmt)
 
 """Save the geolist as a list of strings to an dataset `h5file`"""
 function save_geolist_to_h5(h5file::String, geolist::AbstractArray{Date}; overwrite=false)
@@ -365,7 +366,7 @@ end
 
 # TODO: probably a better way to do this.. but can't figure out how to
 # without allocating so many arrays that it's slow as Python
-function load_stack(; file_list::Union{Array{AbstractString}, Nothing}=nothing, 
+function load_stack(; file_list::Union{AbstractArray{AbstractString}, Nothing}=nothing, 
                     directory::Union{AbstractString, Nothing}=nothing,
                     file_ext::Union{AbstractString, Nothing}=nothing)
     if isnothing(file_list)
@@ -402,18 +403,18 @@ function _return_array(T::Type{Float32}, rows::Int, cols::Int, file_len::Int)
 end
 
 # For normal .int, .geo complex/ masks, just transpose stack
-function _permute(stack::Array{T, 3}, cols::Int) where {T <: Number}
+function _permute(stack::AbstractArray{T, 3}, cols::Int) where {T <: Number}
     return permutedims(stack, (2, 1, 3))
 end
 
 # For normal weird stacked types, pick just the right half
-function _permute(stack::Array{Float32, 3}, cols::Int)
+function _permute(stack::AbstractArray{Float32, 3}, cols::Int)
     return permutedims(stack[cols+1:end, :, :], (2, 1, 3))
 end
 
 
 
-# function _load_stack_complex(file_list::Array{AbstractString}, rows::Int, cols::Int)
+# function _load_stack_complex(file_list::AbstractArray{AbstractString}, rows::Int, cols::Int)
 #     stack = Array{ComplexF32, 3}(undef, (cols, rows, length(file_list)))
 #     buffer = Array{ComplexF32, 2}(undef, (cols, rows))
 # 
@@ -426,7 +427,7 @@ end
 # end
 # 
 # 
-# function _load_stack_stacked(file_list::Array{AbstractString}, rows::Int, cols::Int)
+# function _load_stack_stacked(file_list::AbstractArray{AbstractString}, rows::Int, cols::Int)
 #     stack = Array{Float32, 3}(undef, (2cols, rows, length(file_list)))
 #     buffer = Array{Float32, 2}(undef, (2cols, rows))
 # 
@@ -490,7 +491,7 @@ end
 Cuts off values if the size isn't divisible by num looks
 size = floor(rows / row_looks, cols / col_looks)
 """
-function take_looks(image::Array{T}, row_looks, col_looks) where {T <: Number}
+function take_looks(image::AbstractArray{T}, row_looks, col_looks) where {T <: Number}
     (row_looks == 1 && col_looks == 1) && return image
 
     if ndims(image) > 2
