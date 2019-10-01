@@ -7,7 +7,7 @@ __precompile__(true)
 module Sario
 
 export load, save, load_stack, load_hdf5_stack, load_mask, load_geolist_from_h5,
-       load_intlist_from_h5, get_file_ext, find_files, save_hdf5_stack
+       load_intlist_from_h5, load_dem_from_h5, get_file_ext, find_files, save_hdf5_stack
 
 # Include apertools Python modeules here to make available to all
 using PyCall
