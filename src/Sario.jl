@@ -242,8 +242,29 @@ function _load_bin_matrix(filename, rsc_data, dtype, do_permute::Bool)
     return do_permute ? permutedims(out) : out
 end
 
+
 """Get the composite mask from the stack, true only where ALL pixels are masked"""
-function load_mask(do_permute=true, fname="masks.h5", dset="geo_sum")
+# TODO: worth using the "valid geo idxs"? instead of igrams
+function load_mask(geolist::AbstractArray{Date}, do_permute::Bool=true, fname="masks.h5", dset="geo")
+    geolist_full = Sario.load_geolist_from_h5(fname)
+    idxs = indexin(geolist, geolist_full)
+    rows, cols, _ = size(fname, dset)
+    out = zeros(Bool, (rows, cols))
+
+    h5open(fname) do f
+        d = f[dset]
+        for ii in idxs
+            out .+= @view d[:, :, ii][:, :, 1]   
+        end
+    end
+    return do_permute ? permutedims(out) : out
+end
+
+# TODO: this sucks and doesnt work well... if one day masks out half the map,
+# the geo_sum will be 0 on half, 1 on half. if we ignore that date... this still
+# says "it equals the maximum of the sum, so it's masked
+"""Get the composite mask from the stack, true only where ALL pixels are masked"""
+function load_mask(do_permute::Bool=true, fname="masks.h5", dset="geo_sum")
     mask = h5read(fname, dset)
     mval = max(1, maximum(mask))  # Make sure we dont mask all 0s
     return do_permute ? permutedims(mask .== mval) : mask .== mval
