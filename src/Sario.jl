@@ -257,6 +257,7 @@ function load_mask(geolist::AbstractArray{Date}, do_permute::Bool=true, fname="m
             out .+= @view d[:, :, ii][:, :, 1]   
         end
     end
+    out = convert(Array{Bool}, out)
     return do_permute ? permutedims(out) : out
 end
 
