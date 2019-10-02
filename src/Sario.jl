@@ -242,36 +242,6 @@ function _load_bin_matrix(filename, rsc_data, dtype, do_permute::Bool)
     return do_permute ? permutedims(out) : out
 end
 
-
-"""Get the composite mask from the stack, true only where ALL pixels are masked"""
-# TODO: worth using the "valid geo idxs"? instead of igrams
-function load_mask(geolist::AbstractArray{Date}, do_permute::Bool=true, fname="masks.h5", dset="geo")
-    geolist_full = Sario.load_geolist_from_h5(fname)
-    idxs = indexin(geolist, geolist_full)
-    rows, cols, _ = size(fname, dset)
-    out = zeros(Bool, (rows, cols))
-
-    h5open(fname) do f
-        d = f[dset]
-        for ii in idxs
-            out .+= @view d[:, :, ii][:, :, 1]   
-        end
-    end
-    out = convert(Array{Bool}, out)
-    return do_permute ? permutedims(out) : out
-end
-
-# TODO: this sucks and doesnt work well... if one day masks out half the map,
-# the geo_sum will be 0 on half, 1 on half. if we ignore that date... this still
-# says "it equals the maximum of the sum, so it's masked
-"""Get the composite mask from the stack, true only where ALL pixels are masked"""
-function load_mask(do_permute::Bool=true, fname="masks.h5", dset="geo_sum")
-    mask = h5read(fname, dset)
-    mval = max(1, maximum(mask))  # Make sure we dont mask all 0s
-    return do_permute ? permutedims(mask .== mval) : mask .== mval
-end
-
-
 """load_stacked_img is for weirdly formatted images:
 
 Format is two stacked matrices:
@@ -364,16 +334,15 @@ end
 
 """Wrapper around h5read to account for the transpose
 necessary when reading from python-written stacks
-
 """
-function load_hdf5_stack(h5file::AbstractString, dset_name::AbstractString)
+function load_hdf5_stack(h5file::AbstractString, dset_name::AbstractString; do_permute=true)
     h5open(h5file) do f
-        return permutedims(read(f[dset_name]), (2, 1, 3))
+        return do_permute ? permutedims(read(f[dset_name]), (2, 1, 3)) : read(f[dset_name])
     end
 end
 
 # If loading only certain layers, don't read all into memory
-function load_hdf5_stack(h5file::AbstractString, dset_name::AbstractString, valid_layer_idxs)
+function load_hdf5_stack(h5file::AbstractString, dset_name::AbstractStringr valid_layer_idxs; do_permute=true)
     nrows, ncols, _ = size(h5file, dset_name)
     h5open(h5file) do f
         dset = f[dset_name]
@@ -381,9 +350,42 @@ function load_hdf5_stack(h5file::AbstractString, dset_name::AbstractString, vali
         for (tot_idx, v_idx) in enumerate(valid_layer_idxs)
             out[:, :, tot_idx] = dset[:, :, v_idx]
         end
-        return permutedims(out, (2, 1, 3))
+        return do_permute ? permutedims(out, (2, 1, 3)) : out
     end
 end
+
+"""Sum the 3rd dim (layers) of a stack"""
+function sum_hdf5_stack(h5file::AbstractString, dset_name::AbstractString, valid_layer_idxs)
+    rows, cols, _ = size(fname, dset)
+    out = zeros(eltype(h5file, dset_name), (rows, cols))
+
+    h5open(fname) do f
+        d = f[dset]
+        for ii in idxs
+            out .+= @view d[:, :, ii][:, :, 1]   
+        end
+    end
+    return out
+end
+
+"""Get the composite mask from the stack, true only where ALL pixels are masked"""
+function load_mask(geolist::AbstractArray{Date}; do_permute::Bool=true, fname="masks.h5", dset="geo")
+    geolist_full = Sario.load_geolist_from_h5(fname)
+    idxs = indexin(geolist, geolist_full)
+    out = convert(Array{Bool}, sum_hdf5_stack(h5file, dset, idxs))
+    return do_permute ? permutedims(out) : out
+end
+
+# TODO: this sucks and doesnt work well... if one day masks out half the map,
+# the geo_sum will be 0 on half, 1 on half. if we ignore that date... this still
+# says "it equals the maximum of the sum, so it's masked
+"""Get the composite mask from the stack, true only where ALL pixels are masked"""
+function load_mask(;do_permute::Bool=true, fname="masks.h5", dset="geo_sum")
+    mask = h5read(fname, dset)
+    mval = max(1, maximum(mask))  # Make sure we dont mask all 0s
+    return do_permute ? permutedims(mask .== mval) : mask .== mval
+end
+
 
 
 # TODO: probably a better way to do this.. but can't figure out how to
@@ -407,8 +409,6 @@ function load_stack(; file_list::Union{AbstractArray{AbstractString}, Nothing}=n
     end
 
     return _permute(stack, cols)
-    # throw(ArgumentError(file_ext, "cant make stack from $file_ext"))
-    # end
 end
 
 # Using multiple dispatch to avoid if statements for 2 types of images
