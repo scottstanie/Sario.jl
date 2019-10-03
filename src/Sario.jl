@@ -19,8 +19,7 @@ function __init__()
 end
 # TODO: python transfers:
 # /data1/scott/pecos/path78-bbox2/igrams_looked/
-# rsc_file = pysario.find_rsc_file(filename)
-# rsc_data = pysario.load(rsc_file)
+# return pysario.parse_geolist_strings(geo_strings)
 # const LOAD_IN_PYTHON = vcat(IMAGE_EXTS, [".geojson", ".npy"])
 # GeoJSON.geo2dict(GeoJSON.parsefile("../../bbox2.geojson"))["coordinates"]
 
@@ -47,6 +46,22 @@ const DEM_RSC_DSET = "dem_rsc"
 const STACK_DSET = "stack"
 const GEOLIST_DSET = "geo_dates"
 const INTLIST_DSET = "int_dates"
+
+RSC_KEY_TYPES = [
+    ("width", Int),
+    ("file_length", Int),
+    ("x_first", Float64),
+    ("y_first", Float64),
+    ("x_step", Float64),
+    ("y_step", Float64),
+    ("x_unit", String),
+    ("y_unit", String),
+    ("z_offset", Int),
+    ("z_scale", Int),
+    ("projection", String),
+]
+RSC_KEYS = [tup[1] for tup in RSC_KEY_TYPES]
+
 
 find_files(ext, directory=".") = sort(Glob.glob("*"*ext, directory))
 
@@ -162,16 +177,53 @@ function _get_rsc_data(filename, rsc_file)
 
     rsc_data = nothing
     if !isnothing(rsc_file)
-        rsc_data = pysario.load(rsc_file)
+        rsc_data = load_dem_rsc(rsc_file)
     elseif ext in vcat(SENTINEL_EXTS, ELEVATION_EXTS, BOOL_EXTS)
-        rsc_file = pysario.find_rsc_file(filename)
-        rsc_data = pysario.load(rsc_file)
+        rsc_file = find_rsc_file(filename)
+        rsc_data = load_dem_rsc(rsc_file)
     end
 
-    if !isnothing(rsc_data)
-        rsc_data = convert(Dict{String, Any}, rsc_data)
-    end
+    # if !isnothing(rsc_data)
+        # rsc_data = convert(Dict{String, Any}, rsc_data)
+    # end
     return rsc_data
+end
+
+function find_rsc_file(filename=nothing; directory=nothing, verbose=false)
+    if !isnothing(filename)
+        directory = joinpath(splitpath(filename)[1:end-1]...)
+    end
+    # Should be just elevation.dem.rsc (for .geo folder) or dem.rsc (for igrams)
+    possible_rscs = find_files("*.rsc", directory)
+    if verbose
+        println("Searching $directory for rsc files")
+        println("Possible rsc files:")
+        println(possible_rscs)
+    end
+    if length(possible_rscs) < 1
+        logger.info("No .rsc file found in $directory")
+        return nothing
+    elseif length(possible_rscs) > 1
+        error("$filename has multiple .rsc files in its directory: $possible_rscs")
+    end
+    return abspath(possible_rscs[1])
+end
+
+# TODO: make this into a DemRsc named struct
+function load_dem_rsc(filename, kwargs...)
+    # Use OrderedDict so that upsample_dem_rsc creates with same ordering as old
+    output_data = Dict{Symbol, Any}()
+    # Second part in tuple is used to cast string to correct type
+
+    for line in readlines(filename)
+        for (field, valtype) in RSC_KEY_TYPES
+            if startswith(line, uppercase(field))
+                val = valtype <: AbstractString ? split(line)[2] : parse(valtype, split(line)[2]) 
+                output_data[Symbol(lowercase(field))] = val
+            end
+        end
+    end
+    return output_data 
 end
 
 function _get_data_type(filename)
@@ -205,8 +257,8 @@ function load_elevation(filename; do_permute=true)
     data_type = Int16 
 
     if ext == ".dem"
-        rsc_file = pysario.find_rsc_file(filename)
-        dem_rsc = pysario.load(rsc_file)
+        rsc_file = find_rsc_file(filename)
+        dem_rsc = load(rsc_file)
         rows, cols = (dem_rsc["file_length"], dem_rsc["width"])
         data = Array{data_type, 2}(undef, (cols, rows))
 
@@ -274,7 +326,6 @@ end
 function load_geolist_from_h5(h5file::AbstractString)
     h5open(h5file) do f
         geo_strings = read(f, GEOLIST_DSET)
-        # TODO: bring this here... might even be able to directly pass callable to `read`
         return pysario.parse_geolist_strings(geo_strings)
     end
 end
@@ -288,6 +339,18 @@ function load_intlist_from_h5(h5file)
         return pysario.parse_intlist_strings(int_strings')
     end
 end
+
+function parse_intlist_strings(date_pairs::AbstractArray{<:AbstractString})
+    # TODO: not the same
+    date_pairs = [split(strip(d, ".int"), "_")[1:2] for d in date_pairs]
+    @show date_pairs
+    return parse_intlist_strings(date_pairs)
+end
+
+_parse(datestr) = Date(datestr, DATE_FMT)
+parse_geolist_strings(geolist_str) = _parse.(geolist_str)
+parse_intlist_strings(date_pairs) = [_parse(pair) for pair in date_pairs]
+
 
 import Base.string
 string(arr::AbstractArray{Date}, fmt="yyyymmdd") = Dates.format.(arr, fmt)
@@ -342,7 +405,7 @@ function load_hdf5_stack(h5file::AbstractString, dset_name::AbstractString; do_p
 end
 
 # If loading only certain layers, don't read all into memory
-function load_hdf5_stack(h5file::AbstractString, dset_name::AbstractStringr valid_layer_idxs; do_permute=true)
+function load_hdf5_stack(h5file::AbstractString, dset_name::AbstractString, valid_layer_idxs; do_permute=true)
     nrows, ncols, _ = size(h5file, dset_name)
     h5open(h5file) do f
         dset = f[dset_name]
@@ -370,7 +433,7 @@ end
 
 """Get the composite mask from the stack, true only where ALL pixels are masked"""
 function load_mask(geolist::AbstractArray{Date}; do_permute::Bool=true, fname="masks.h5", dset="geo")
-    geolist_full = Sario.load_geolist_from_h5(fname)
+    geolist_full = load_geolist_from_h5(fname)
     idxs = indexin(geolist, geolist_full)
     out = convert(Array{Bool}, sum_hdf5_stack(h5file, dset, idxs))
     return do_permute ? permutedims(out) : out
@@ -397,7 +460,7 @@ function load_stack(; file_list::Union{AbstractArray{AbstractString}, Nothing}=n
         file_list = find_files(file_ext, directory)
     end
 
-    # rsc_data = pysario.load(pysario.find_rsc_file(basepath=directory))
+    # rsc_data = load(find_rsc_file(basepath=directory))
     test_arr = load(file_list[1])
     rows, cols = size(test_arr)
     T = eltype(test_arr)
@@ -482,7 +545,7 @@ function save(filename::AbstractString, array; do_permute=true, kwargs...)
         out = do_permute ? transpose(hcat(amp, data)) : vcat(amp, data)
         tofile(filename, _force_float32(out), do_permute=false)
     else
-        pysario.save(filename, array)
+        error("Filetype not implemented: $filename")
     end
 end
 
@@ -546,5 +609,33 @@ take_looks(other, row_looks, col_looks) = other
 
 # For future:
 # cc_patch(a, b) = real(abs(sum(a .* conj.(b))) / sqrt(sum(a .* conj.(a)) * sum(b .* conj.(b))))
+
+# function format_dem_rsc(rsc_dict)
+#     outstring = ""
+#     rsc_dict = Dict(String(k) => v for (k, v) in rsc_dict)
+#     # for field, value in rsc_dict.items():
+#     for field in RSC_KEYS
+#         # Make sure to skip extra keys that might be in the dict
+#         if !(field in RSC_KEYS)
+#             continue
+#         end
+# 
+#         value = rsc_dict.get(field, DEFAULT_KEYS.get(field))
+#         if value is nothing
+#             error("$field is necessary for .rsc file: missing from dict")
+#         end
+# 
+#         # Files seemed to be left justified with 14 spaces? Not sure why 14
+#         # Apparently it was an old fortran format, where they use "read(15)"
+#         if field in ("x_step", "y_step"):
+#             # give step floats proper sig figs to not output scientific notation
+#             outstring += "{field:<14s}{val:0.12f}\n".format(field=field.upper(), val=value)
+#         else:
+#             outstring += "{field:<14s}{val}\n".format(field=field.upper(), val=value)
+#         end
+#     end
+# 
+#     return outstring
+# end
 
 end # module
