@@ -9,17 +9,7 @@ module Sario
 export load, save, load_stack, load_hdf5_stack, load_mask, load_geolist_from_h5,
        load_intlist_from_h5, load_dem_from_h5, get_file_ext, find_files, save_hdf5_stack
 
-# Include apertools Python modeules here to make available to all
-using PyCall
-const pysario = PyNULL()
-
-function __init__()
-    # TODO: remove all the backups so we don't need this...
-    copy!(pysario, pyimport("apertools.sario"))
-end
 # TODO: python transfers:
-# /data1/scott/pecos/path78-bbox2/igrams_looked/
-# return pysario.parse_geolist_strings(geo_strings)
 # const LOAD_IN_PYTHON = vcat(IMAGE_EXTS, [".geojson", ".npy"])
 # GeoJSON.geo2dict(GeoJSON.parsefile("../../bbox2.geojson"))["coordinates"]
 
@@ -36,10 +26,10 @@ const ELEVATION_EXTS = [".dem", ".hgt"]
 # These file types are not simple complex matrices: see load_stacked_img for detail
 # .unwflat are same as .unw, but with a linear ramp removed
 const STACKED_FILES = [".cc", ".unw", ".unwflat"]
-const IMAGE_EXTS = [".png", ".tif", ".tiff", ".jpg"]
 const BOOL_EXTS = [".mask"]
 
-const LOAD_IN_PYTHON = vcat(IMAGE_EXTS, [".geojson", ".npy"])
+const IMAGE_EXTS = [".png", ".tif", ".tiff", ".jpg"]
+const NOT_IMPLEMENTED = vcat(IMAGE_EXTS, [".geojson", ".npy"])
 
 # For HDF5 saving
 const DEM_RSC_DSET = "dem_rsc"
@@ -87,8 +77,8 @@ function load(filename::AbstractString; rsc_file::Union{AbstractString, Nothing}
     ext = get_file_ext(filename)
 
     # For now, just pass through unimplemented extensions to Python
-    if ext in LOAD_IN_PYTHON
-        return take_looks(pysario.load(filename), looks...)
+    if ext in NOT_IMPLEMENTED
+        error("$ext is not yet implemented")
     elseif ext == ".rsc"
         return _get_rsc_data(filename, filename)
     elseif ext in ELEVATION_EXTS
@@ -326,7 +316,7 @@ end
 function load_geolist_from_h5(h5file::AbstractString)
     h5open(h5file) do f
         geo_strings = read(f, GEOLIST_DSET)
-        return pysario.parse_geolist_strings(geo_strings)
+        return parse_geolist_strings(geo_strings)
     end
 end
 
@@ -336,7 +326,7 @@ function load_intlist_from_h5(h5file)
         int_strings = read(f, INTLIST_DSET)
         # Note transpose, since it's stored as a N x 2 array
         # (which is flipped to 2 x N for julia
-        return pysario.parse_intlist_strings(int_strings')
+        return parse_intlist_strings(int_strings')
     end
 end
 
