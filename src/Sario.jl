@@ -408,7 +408,9 @@ end
 """Sum the 3rd dim (layers) of a stack"""
 function sum_hdf5_stack(h5file::AbstractString, dset_name::AbstractString, valid_layer_idxs)
     rows, cols, _ = size(h5file, dset_name)
-    out = zeros(eltype(h5file, dset_name), (rows, cols))
+    # For summing, using int instead of bool
+    dtype = eltype(h5file, dset_name) <: Bool ? Int : eltype(h5file, dset_name)
+    out = zeros(dtype, (rows, cols))
 
     h5open(h5file) do f
         d = f[dset_name]
@@ -423,7 +425,7 @@ end
 function load_mask(geolist::AbstractArray{Date, 1}; do_permute::Bool=true, fname="masks.h5", dset_name="geo")
     geolist_full = load_geolist_from_h5(fname)
     idxs = indexin(geolist, geolist_full)
-    out = convert(Array{Bool}, sum_hdf5_stack(fname, dset_name, idxs))
+    out = convert(Array{Bool}, sum_hdf5_stack(fname, dset_name, idxs) .> 0)
     return do_permute ? permutedims(out) : out
 end
 
