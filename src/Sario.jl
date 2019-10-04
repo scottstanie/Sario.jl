@@ -412,7 +412,7 @@ function sum_hdf5_stack(h5file::AbstractString, dset_name::AbstractString, valid
 
     h5open(h5file) do f
         d = f[dset_name]
-        for ii in idxs
+        for ii in valid_layer_idxs
             out .+= @view d[:, :, ii][:, :, 1]   
         end
     end
