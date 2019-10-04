@@ -313,25 +313,22 @@ function load_stacked_img(filename::AbstractString, rsc_data::Dict{<:AbstractStr
 end
 
 function load_geolist_from_h5(h5file::AbstractString)
-    h5open(h5file) do f
-        geo_strings = read(f, GEOLIST_DSET)
-        return parse_geolist_strings(geo_strings)
-    end
+    geo_strings = h5read(h5file, GEOLIST_DSET)
+    return parse_geolist_strings(geo_strings)
 end
 
 
 function load_intlist_from_h5(h5file)
-    h5open(h5file) do f
-        int_strings = read(f, INTLIST_DSET)
-        # Note transpose, since it's stored as a N x 2 array
-        # (which is flipped to 2 x N for julia
-        return parse_intlist_strings(int_strings')
-    end
+    # Note transpose, since it's stored as a N x 2 array
+    # (which is flipped to 2 x N for julia
+    int_strings = h5read(h5file, INTLIST_DSET)
+    return parse_intlist_strings([Tuple(int_strings[:, ii]) for ii in 1:size(int_strings, 2)])
 end
 
 _parse(datestr) = Date(datestr, DATE_FMT)
 
-function parse_intlist_strings(date_pairs::AbstractArray{<:AbstractString})
+function parse_intlist_strings(date_pairs::AbstractArray{<:AbstractString, 1})
+    # For passing list of filenames ["20150101_20160101.int", ...]
     # `collect` used to make into an array of chars for strip
     date_pairs = [split(strip(d, collect(".int")), "_")[1:2] for d in date_pairs]
     date_tups = [Tuple(d) for d in date_pairs]
