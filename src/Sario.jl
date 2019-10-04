@@ -173,9 +173,6 @@ function _get_rsc_data(filename, rsc_file)
         rsc_data = load_dem_rsc(rsc_file)
     end
 
-    # if !isnothing(rsc_data)
-        # rsc_data = convert(Dict{String, Any}, rsc_data)
-    # end
     return rsc_data
 end
 
@@ -202,14 +199,14 @@ end
 # TODO: make this into a DemRsc named struct
 function load_dem_rsc(filename, kwargs...)
     # Use OrderedDict so that upsample_dem_rsc creates with same ordering as old
-    output_data = Dict{Symbol, Any}()
+    output_data = Dict{String, Any}()
     # Second part in tuple is used to cast string to correct type
 
     for line in readlines(filename)
         for (field, valtype) in RSC_KEY_TYPES
             if startswith(line, uppercase(field))
                 val = valtype <: AbstractString ? split(line)[2] : parse(valtype, split(line)[2]) 
-                output_data[Symbol(lowercase(field))] = val
+                output_data[lowercase(field)] = val
             end
         end
     end
@@ -284,7 +281,9 @@ function _load_bin_matrix(filename, rsc_data, dtype, do_permute::Bool)
     return do_permute ? permutedims(out) : out
 end
 
-"""load_stacked_img is for weirdly formatted images:
+
+"""load_stacked_img is for the weird "ALT_LINE_DATA" formatted images:
+https://web.stanford.edu/group/radar/softwareandlinks/sw/snaphu/snaphu_man1.html#FILE%20FORMATS
 
 Format is two stacked matrices:
     [[first], [second]] where the first "cols" number of floats
@@ -330,16 +329,18 @@ function load_intlist_from_h5(h5file)
     end
 end
 
+_parse(datestr) = Date(datestr, DATE_FMT)
+
 function parse_intlist_strings(date_pairs::AbstractArray{<:AbstractString})
-    # TODO: not the same
-    date_pairs = [split(strip(d, ".int"), "_")[1:2] for d in date_pairs]
-    @show date_pairs
+    # `collect` used to make into an array of chars for strip
+    date_pairs = [split(strip(d, collect(".int")), "_")[1:2] for d in date_pairs]
+    date_tups = [Tuple(d) for d in date_pairs]
     return parse_intlist_strings(date_pairs)
 end
 
-_parse(datestr) = Date(datestr, DATE_FMT)
-parse_geolist_strings(geolist_str) = _parse.(geolist_str)
-parse_intlist_strings(date_pairs) = [_parse(pair) for pair in date_pairs]
+parse_intlist_strings(date_pairs) = [_parse.(pair) for pair in date_pairs]
+
+parse_geolist_strings(geolist_str::AbstractArray{String}) = _parse.(geolist_str)
 
 
 import Base.string

@@ -1,4 +1,8 @@
-# import Sario
+try
+    import Sario
+catch
+    println("import error")
+end
 using Test
 
 @testset "Sario.jl" begin
@@ -22,4 +26,11 @@ using Test
 
     @test Sario.load(demfile, (2:4, 2:4)) == dem[2:4, 2:4]
     @test Sario.load(demfile, (2:4, 2:4)) == Sario.load(demfile)[2:4, 2:4]
+
+    expected_ints = [(Date(2015,1,1), Date(2016,1,1)),
+                     (Date(2016,1,1), Date(2017,1,1))]
+
+    @test Sario.parse_intlist_strings([("20150101", "20160101"),
+                                       ("20160101", "20170101")]) == expected_ints
+    @test Sario.parse_intlist_strings(["20150101_20160101.int", "20160101_20170101.int"]) == expected_ints
 end
