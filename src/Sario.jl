@@ -335,7 +335,7 @@ function parse_intlist_strings(date_pairs::AbstractArray{<:AbstractString})
     # `collect` used to make into an array of chars for strip
     date_pairs = [split(strip(d, collect(".int")), "_")[1:2] for d in date_pairs]
     date_tups = [Tuple(d) for d in date_pairs]
-    return parse_intlist_strings(date_pairs)
+    return parse_intlist_strings(date_tups)
 end
 
 parse_intlist_strings(date_pairs) = [_parse.(pair) for pair in date_pairs]
