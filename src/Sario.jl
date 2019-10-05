@@ -86,7 +86,7 @@ function load(filename::AbstractString;
     elseif ext in ELEVATION_EXTS
         return take_looks(load_elevation(filename), looks...)
     elseif ext == ".h5"
-        return take_looks(_load_hdf5(filename, dset_name), looks...)
+        return take_looks(_load_hdf5(filename, dset_name; do_permute=do_permute), looks...)
     end
 
     # Sentinel files should have .rsc file: check for dem.rsc, or elevation.rsc
@@ -166,16 +166,17 @@ function load(filename::AbstractString, idxs::RangeTuple;
     return do_permute ? permutedims(out) : out
 end
 
-function _load_hdf5(h5file::AbstractString, dset_name::AbstractString="")
-    h5open(filename, "r") do f
+function _load_hdf5(h5file::AbstractString, dset_name::AbstractString=""; do_permute=true)
+    h5open(h5file, "r") do f
         if isempty(dset_name)
-            if length(names(f)) == 1 && typeof(f[names(1)]) == HDF5Dataset
+            if length(names(f)) == 1 && typeof(f[names(f)[1]]) == HDF5Dataset
                 dset_name = names(f)[1]
+                println("Loading \"$dset_name\" from $h5file")
             else
                 error("More than 1 dset exists in $h5file, provide name to `load`")
             end
         end
-        return read(f, dset_name)
+        return do_permute ? permutedims(read(f, dset_name)) : read(f, dset_name)
     end
 end
 
