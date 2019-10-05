@@ -218,20 +218,20 @@ function find_rsc_file(filename=nothing; directory=nothing, verbose=false)
     return abspath(possible_rscs[1])
 end
 
-function load_dem_rsc(filename, kwargs...)
-    # Use OrderedDict so that upsample_dem_rsc creates with same ordering as old
-    output_data = DemRsc()
-    # Second part in tuple is used to cast string to correct type
+"""Convert the text file into the DemRsc struct
+Starts with a dict to gather all fiields, then unpacks using keywords args"""
+function load_dem_rsc(filename, kwargs...)::DemRsc
+    output_data = Dict{Symbol, Any}()
 
     for line in readlines(filename)
         for (field, valtype) in RSC_KEY_TYPES
             if startswith(line, uppercase(field))
                 val = valtype <: AbstractString ? split(line)[2] : parse(valtype, split(line)[2]) 
-                output_data[lowercase(field)] = val
+                output_data[Symbol(lowercase(field))] = val
             end
         end
     end
-    return output_data 
+    return DemRsc(;output_data...)
 end
 
 function _get_data_type(filename)
@@ -385,15 +385,18 @@ function save_geolist_to_h5(h5file::String, object::String, geolist::AbstractArr
     end
 end
 
+# In HDF5, DemRscs are stored as JSON dicts
 load_dem_from_h5(h5file, dset=DEM_RSC_DSET) = JSON.parse(h5read(h5file, dset))
 
-function save_dem_to_h5(h5file, dem_rsc, dset_name=DEM_RSC_DSET; overwrite=true)
+function save_dem_to_h5(h5file, dem_rsc::AbstractDict{String, Any}, dset_name=DEM_RSC_DSET; overwrite=true)
     h5open(h5file, "cw") do f
         overwrite && dset_name in names(f) && o_delete(f, dset_name)
 
         write(f, dset_name, JSON.json(dem_rsc))
     end
 end
+# TODO:
+# save_dem_to_h5(h5file, dem_rsc::DemRsc, dset_name=DEM_RSC_DSET; overwrite=true)
 
 function save_hdf5_stack(h5file::AbstractString, dset_name::AbstractString, stack; overwrite::Bool=false, do_permute=true)
     # TODO: is there a way to combine this with normal saving of files?
@@ -621,32 +624,5 @@ take_looks(other, row_looks, col_looks) = other
 # For future:
 # cc_patch(a, b) = real(abs(sum(a .* conj.(b))) / sqrt(sum(a .* conj.(a)) * sum(b .* conj.(b))))
 
-# function format_dem_rsc(rsc_dict)
-#     outstring = ""
-#     rsc_dict = Dict(String(k) => v for (k, v) in rsc_dict)
-#     # for field, value in rsc_dict.items():
-#     for field in RSC_KEYS
-#         # Make sure to skip extra keys that might be in the dict
-#         if !(field in RSC_KEYS)
-#             continue
-#         end
-# 
-#         value = rsc_dict.get(field, DEFAULT_KEYS.get(field))
-#         if value is nothing
-#             error("$field is necessary for .rsc file: missing from dict")
-#         end
-# 
-#         # Files seemed to be left justified with 14 spaces? Not sure why 14
-#         # Apparently it was an old fortran format, where they use "read(15)"
-#         if field in ("x_step", "y_step"):
-#             # give step floats proper sig figs to not output scientific notation
-#             outstring += "{field:<14s}{val:0.12f}\n".format(field=field.upper(), val=value)
-#         else:
-#             outstring += "{field:<14s}{val}\n".format(field=field.upper(), val=value)
-#         end
-#     end
-# 
-#     return outstring
-# end
 
 end # module
