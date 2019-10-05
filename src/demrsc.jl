@@ -17,9 +17,13 @@ using Parameters
     z_offset::Int = 0
     z_scale::Int = 1
     projection::String = "LL"
+    # Two easier-to-remember aliases than "file_length/width"
+    rows::Int = width
+    cols::Int = file_length
 end
 
-const FIELDS = fieldnames(DemRsc)
+# The last two aren't saved to .rsc files, just convenience
+const PRINT_FIELDS = fieldnames(DemRsc)[1:11]
 
 # E.g. DemRsc(width=10, file_length=10, x_step=1., y_step=1., x_first=1., y_first=1.)
 
@@ -32,22 +36,22 @@ DemRsc(width, file_length, x_first, y_first,
 
 
 function Base.iterate(d::DemRsc)
-    return (Pair(FIELDS[1], getproperty(d, FIELDS[1])), 2)
+    return (Pair(PRINT_FIELDS[1], getproperty(d, PRINT_FIELDS[1])), 2)
 end
 function iterate(d::DemRsc, i)
     # Never empty like dict...  length(d.keys) < i && return nothing 
-    length(FIELDS) < i && return nothing
-    return (Pair(FIELDS[i], getproperty(d, FIELDS[i])), i + 1)
+    length(PRINT_FIELDS) < i && return nothing
+    return (Pair(PRINT_FIELDS[i], getproperty(d, PRINT_FIELDS[i])), i + 1)
 end
 
 # Is this confusing? trying to be like dict... used for iteration
-Base.length(d::DemRsc) = length(FIELDS)
+Base.length(d::DemRsc) = length(PRINT_FIELDS)
 
 function format_dem_rsc(demrsc::DemRsc)
     outstring = ""
 
     # for field, value in rsc_dict.items():
-    for field in FIELDS
+    for field in PRINT_FIELDS
         value = getproperty(demrsc, field)
 
         # Files seemed to be left justified with 14 spaces? Not sure why 14
