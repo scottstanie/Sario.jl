@@ -72,8 +72,10 @@ Raises:
     ValueError: if sentinel files loaded without a .rsc file in same path
         to give the file width
 """
-function load(filename::AbstractString; rsc_file::Union{AbstractString, Nothing}=nothing,
-              looks::Tuple{Int, Int}=(1, 1), do_permute=true, return_amp=false)
+function load(filename::AbstractString; 
+              rsc_file::Union{AbstractString, Nothing}=nothing,
+              looks::Tuple{Int, Int}=(1, 1), do_permute=true, 
+              dset_name::AbstractString="", return_amp::Bool=false)
     ext = get_file_ext(filename)
 
     # For now, just pass through unimplemented extensions to Python
@@ -83,6 +85,8 @@ function load(filename::AbstractString; rsc_file::Union{AbstractString, Nothing}
         return _get_rsc_data(filename, filename)
     elseif ext in ELEVATION_EXTS
         return take_looks(load_elevation(filename), looks...)
+    elseif ext == ".h5"
+        return take_looks(_load_hdf5(filename, dset_name), looks...)
     end
 
     # Sentinel files should have .rsc file: check for dem.rsc, or elevation.rsc
@@ -161,6 +165,20 @@ function load(filename::AbstractString, idxs::RangeTuple;
     end
     return do_permute ? permutedims(out) : out
 end
+
+function _load_hdf5(h5file::AbstractString, dset_name::AbstractString="")
+    h5open(filename, "r") do f
+        if isempty(dset_name)
+            if length(names(f)) == 1 && typeof(f[names(1)]) == HDF5Dataset
+                dset_name = names(f)[1]
+            else
+                error("More than 1 dset exists in $h5file, provide name to `load`")
+            end
+        end
+        return read(f, dset_name)
+    end
+end
+
 
 function _get_rsc_data(filename, rsc_file)
     ext = get_file_ext(filename)
