@@ -6,7 +6,9 @@ __precompile__(true)
 
 module Sario
 
-export load, save, load_stack, load_hdf5_stack, load_mask, load_geolist_from_h5,
+include("./demrsc.jl")
+
+export load, save, DemRsc, load_stack, load_hdf5_stack, load_mask, load_geolist_from_h5,
        load_intlist_from_h5, load_dem_from_h5, get_file_ext, find_files, save_hdf5_stack
 
 # TODO: python transfers:
@@ -181,7 +183,8 @@ function _load_hdf5(h5file::AbstractString, dset_name::AbstractString=""; do_per
 end
 
 
-function _get_rsc_data(filename, rsc_file)
+"""Handle getting the .rsc data from either an image filename, or .rsc filename"""
+function _get_rsc_data(filename, rsc_file::Union{AbstractString, Nothing})
     ext = get_file_ext(filename)
 
     rsc_data = nothing
@@ -215,10 +218,9 @@ function find_rsc_file(filename=nothing; directory=nothing, verbose=false)
     return abspath(possible_rscs[1])
 end
 
-# TODO: make this into a DemRsc named struct
 function load_dem_rsc(filename, kwargs...)
     # Use OrderedDict so that upsample_dem_rsc creates with same ordering as old
-    output_data = Dict{String, Any}()
+    output_data = DemRsc()
     # Second part in tuple is used to cast string to correct type
 
     for line in readlines(filename)

@@ -1,0 +1,11 @@
+WIDTH         10
+FILE_LENGTH   10
+X_FIRST       -104.10000000252
+Y_FIRST       32.80000000056
+X_STEP        0.004166666640
+Y_STEP        -0.004166666640
+X_UNIT        degrees
+Y_UNIT        degrees
+Z_OFFSET      0
+Z_SCALE       1
+PROJECTION    LL
