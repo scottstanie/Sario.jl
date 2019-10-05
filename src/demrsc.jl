@@ -1,7 +1,7 @@
 
 import Printf: @sprintf
 import OrderedCollections: OrderedDict
-import Base: show, convert, print
+import Base: show, convert, print, keys, iterate
 
 using Parameters
 
@@ -19,6 +19,8 @@ using Parameters
     projection::String = "LL"
 end
 
+const FIELDS = fieldnames(DemRsc)
+
 # E.g. DemRsc(width=10, file_length=10, x_step=1., y_step=1., x_first=1., y_first=1.)
 
 
@@ -27,6 +29,42 @@ DemRsc(width, file_length, x_first, y_first,
        x_step, y_step) = DemRsc(width=width, file_length=file_length, 
                                 x_first=x_first, y_first=y_first, 
                                 x_step=x_step, y_step=y_step)
+
+
+function Base.iterate(d::DemRsc)
+    return (Pair(FIELDS[1], getproperty(d, FIELDS[1])), 2)
+end
+function iterate(d::DemRsc, i)
+    # Never empty like dict...  length(d.keys) < i && return nothing 
+    length(FIELDS) < i && return nothing
+    return (Pair(FIELDS[i], getproperty(d, FIELDS[i])), i + 1)
+end
+
+# Is this confusing? trying to be like dict... used for iteration
+Base.length(d::DemRsc) = length(FIELDS)
+
+function format_dem_rsc(demrsc::DemRsc)
+    outstring = ""
+
+    # for field, value in rsc_dict.items():
+    for field in FIELDS
+        value = getproperty(demrsc, field)
+
+        # Files seemed to be left justified with 14 spaces? Not sure why 14
+        # Apparently it was an old fortran format, where they use "read(15)"
+        if field in (:x_step, :y_step)
+            # give step floats proper sig figs to not output scientific notation
+            outstring *= @sprintf("%-14s%0.12f\n", uppercase(string(field)), value)
+            # outstring *= @sprint"{field:<14s}{val:0.12f}\n".format(field=field.upper(), val=value)
+        else
+            outstring *= @sprintf("%-14s%s\n", uppercase(string(field)), value)
+            # outstring *= "{field:<14s}{val}\n".format(field=field.upper(), val=value)
+        end
+    end
+
+    return outstring
+end
+Base.print(io::IO, x::DemRsc) = print(format_dem_rsc(x))
 
 # For use in unpacking
 _symdict(d::AbstractDict{String, Any}) = Dict(Symbol(k) => v for (k, v) in d)
@@ -45,33 +83,5 @@ end
 # For converting to/from Dicts for python/HDF5 saving
 Base.convert(::Type{DemRsc}, x::OrderedDict{String, Any}) = DemRsc(x)
 Base.convert(::Type{OrderedDict{String, Any}}, x::DemRsc) = stringdict(x)
-# Base.convert(::Type{Dict{String, Any}}, x::DemRsc) = stringdict(x)
+Base.convert(::Type{Dict{String, Any}}, x::DemRsc) = stringdict(x)
 
-# TODO: iterate
-# julia> iterate(dd)
-# ("width" => 2, 2)
-# Base.iterate(demrsc::DemRsc)
-
-function format_dem_rsc(demrsc::DemRsc)
-    outstring = ""
-
-    # rsc_dict = Dict(String(k) => v for (k, v) in rsc_dict)
-    # for field, value in rsc_dict.items():
-    for field in fieldnames(typeof(demrsc))
-        value = getproperty(demrsc, field)
-
-        # Files seemed to be left justified with 14 spaces? Not sure why 14
-        # Apparently it was an old fortran format, where they use "read(15)"
-        if field in (:x_step, :y_step)
-            # give step floats proper sig figs to not output scientific notation
-            outstring *= @sprintf("%-14s%0.12f\n", uppercase(string(field)), value)
-            # outstring *= @sprint"{field:<14s}{val:0.12f}\n".format(field=field.upper(), val=value)
-        else
-            outstring *= @sprintf("%-14s%s\n", uppercase(string(field)), value)
-            # outstring *= "{field:<14s}{val}\n".format(field=field.upper(), val=value)
-        end
-    end
-
-    return outstring
-end
-Base.print(io::IO, x::DemRsc) = print(format_dem_rsc(x))
