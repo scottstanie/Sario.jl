@@ -18,8 +18,8 @@ using Parameters
     z_scale::Int = 1
     projection::String = "LL"
     # Two easier-to-remember aliases than "file_length/width"
-    rows::Int = width
-    cols::Int = file_length
+    rows::Int = file_length
+    cols::Int = width
 end
 
 # The last two aren't saved to .rsc files, just convenience
