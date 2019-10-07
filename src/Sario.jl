@@ -338,11 +338,21 @@ function load_geolist_from_h5(h5file::AbstractString)
     return parse_geolist_strings(geo_strings)
 end
 
+function load_geolist_from_h5(h5file::AbstractString, dset::AbstractString)
+    geo_strings = h5readattr(h5file, dset)[GEOLIST_DSET]
+    return parse_geolist_strings(geo_strings)
+end
+
 
 function load_intlist_from_h5(h5file)
     # Note transpose, since it's stored as a N x 2 array
     # (which is flipped to 2 x N for julia
     int_strings = h5read(h5file, INTLIST_DSET)
+    return parse_intlist_strings([Tuple(int_strings[:, ii]) for ii in 1:size(int_strings, 2)])
+end
+
+function load_intlist_from_h5(h5file, dset::AbstractString)
+    int_strings = h5readattr(h5file, dset)[INTLIST_DSET]
     return parse_intlist_strings([Tuple(int_strings[:, ii]) for ii in 1:size(int_strings, 2)])
 end
 
@@ -459,7 +469,6 @@ function load_mask(;do_permute::Bool=true, fname="masks.h5", dset="geo_sum")
     mval = max(1, maximum(mask))  # Make sure we dont mask all 0s
     return do_permute ? permutedims(mask .== mval) : mask .== mval
 end
-
 
 
 # TODO: probably a better way to do this.. but can't figure out how to
