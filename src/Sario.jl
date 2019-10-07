@@ -473,6 +473,27 @@ function load_mask(;do_permute::Bool=true, fname="masks.h5", dset="geo_sum")
     return do_permute ? permutedims(mask .== mval) : mask .== mval
 end
 
+"""Returns false if the dataset exists and overwrite is false
+
+If overwrite is set to true, will delete the dataset to make
+sure a new one can be created"""
+function check_dset(h5file, dset_name, overwrite)
+    h5open(h5file, "cw") do f
+        if dset_name in names(f)
+            println("$dset_name already exists in $h5file")
+            if overwrite
+                println("Overwrite true: Deleting.")
+                o_delete(f, dset_name)
+            else
+                println("Skipping $dset_name: not deleting")
+                return false
+            end
+        end
+
+        return true
+    end
+end
+
 
 # TODO: probably a better way to do this.. but can't figure out how to
 # without allocating so many arrays that it's slow as Python
