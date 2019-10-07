@@ -218,20 +218,20 @@ function find_rsc_file(filename=nothing; directory=nothing, verbose=false)
     return abspath(possible_rscs[1])
 end
 
-function load_dem_rsc(filename, kwargs...)
-    # Use OrderedDict so that upsample_dem_rsc creates with same ordering as old
-    output_data = DemRsc()
-    # Second part in tuple is used to cast string to correct type
+"""Convert the text file into the DemRsc struct
+Starts with a dict to gather all fiields, then unpacks using keywords args"""
+function load_dem_rsc(filename, kwargs...)::DemRsc
+    output_data = Dict{Symbol, Any}()
 
     for line in readlines(filename)
         for (field, valtype) in RSC_KEY_TYPES
             if startswith(line, uppercase(field))
                 val = valtype <: AbstractString ? split(line)[2] : parse(valtype, split(line)[2]) 
-                output_data[lowercase(field)] = val
+                output_data[Symbol(lowercase(field))] = val
             end
         end
     end
-    return output_data 
+    return DemRsc(;output_data...)
 end
 
 function _get_data_type(filename)
@@ -338,11 +338,21 @@ function load_geolist_from_h5(h5file::AbstractString)
     return parse_geolist_strings(geo_strings)
 end
 
+function load_geolist_from_h5(h5file::AbstractString, dset::AbstractString)
+    geo_strings = h5readattr(h5file, dset)[GEOLIST_DSET]
+    return parse_geolist_strings(geo_strings)
+end
+
 
 function load_intlist_from_h5(h5file)
     # Note transpose, since it's stored as a N x 2 array
     # (which is flipped to 2 x N for julia
     int_strings = h5read(h5file, INTLIST_DSET)
+    return parse_intlist_strings([Tuple(int_strings[:, ii]) for ii in 1:size(int_strings, 2)])
+end
+
+function load_intlist_from_h5(h5file, dset::AbstractString)
+    int_strings = h5readattr(h5file, dset)[INTLIST_DSET]
     return parse_intlist_strings([Tuple(int_strings[:, ii]) for ii in 1:size(int_strings, 2)])
 end
 
@@ -385,15 +395,18 @@ function save_geolist_to_h5(h5file::String, object::String, geolist::AbstractArr
     end
 end
 
+# In HDF5, DemRscs are stored as JSON dicts
 load_dem_from_h5(h5file, dset=DEM_RSC_DSET) = JSON.parse(h5read(h5file, dset))
 
-function save_dem_to_h5(h5file, dem_rsc, dset_name=DEM_RSC_DSET; overwrite=true)
+function save_dem_to_h5(h5file, dem_rsc::AbstractDict{String, Any}, dset_name=DEM_RSC_DSET; overwrite=true)
     h5open(h5file, "cw") do f
         overwrite && dset_name in names(f) && o_delete(f, dset_name)
 
         write(f, dset_name, JSON.json(dem_rsc))
     end
 end
+# TODO:
+# save_dem_to_h5(h5file, dem_rsc::DemRsc, dset_name=DEM_RSC_DSET; overwrite=true)
 
 function save_hdf5_stack(h5file::AbstractString, dset_name::AbstractString, stack; overwrite::Bool=false, do_permute=true)
     # TODO: is there a way to combine this with normal saving of files?
@@ -460,6 +473,26 @@ function load_mask(;do_permute::Bool=true, fname="masks.h5", dset="geo_sum")
     return do_permute ? permutedims(mask .== mval) : mask .== mval
 end
 
+"""Returns false if the dataset exists and overwrite is false
+
+If overwrite is set to true, will delete the dataset to make
+sure a new one can be created"""
+function check_dset(h5file, dset_name, overwrite)
+    h5open(h5file, "cw") do f
+        if dset_name in names(f)
+            println("$dset_name already exists in $h5file")
+            if overwrite
+                println("Overwrite true: Deleting.")
+                o_delete(f, dset_name)
+            else
+                println("Skipping $dset_name: not deleting")
+                return false
+            end
+        end
+
+        return true
+    end
+end
 
 
 # TODO: probably a better way to do this.. but can't figure out how to
@@ -621,32 +654,5 @@ take_looks(other, row_looks, col_looks) = other
 # For future:
 # cc_patch(a, b) = real(abs(sum(a .* conj.(b))) / sqrt(sum(a .* conj.(a)) * sum(b .* conj.(b))))
 
-# function format_dem_rsc(rsc_dict)
-#     outstring = ""
-#     rsc_dict = Dict(String(k) => v for (k, v) in rsc_dict)
-#     # for field, value in rsc_dict.items():
-#     for field in RSC_KEYS
-#         # Make sure to skip extra keys that might be in the dict
-#         if !(field in RSC_KEYS)
-#             continue
-#         end
-# 
-#         value = rsc_dict.get(field, DEFAULT_KEYS.get(field))
-#         if value is nothing
-#             error("$field is necessary for .rsc file: missing from dict")
-#         end
-# 
-#         # Files seemed to be left justified with 14 spaces? Not sure why 14
-#         # Apparently it was an old fortran format, where they use "read(15)"
-#         if field in ("x_step", "y_step"):
-#             # give step floats proper sig figs to not output scientific notation
-#             outstring += "{field:<14s}{val:0.12f}\n".format(field=field.upper(), val=value)
-#         else:
-#             outstring += "{field:<14s}{val}\n".format(field=field.upper(), val=value)
-#         end
-#     end
-# 
-#     return outstring
-# end
 
 end # module
