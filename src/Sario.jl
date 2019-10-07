@@ -655,4 +655,60 @@ take_looks(other, row_looks, col_looks) = other
 # cc_patch(a, b) = real(abs(sum(a .* conj.(b))) / sqrt(sum(a .* conj.(a)) * sum(b .* conj.(b))))
 
 
+"""Reads the list of igrams to returns Array of Igrams
+
+Args:
+    directory (str): path to the igram directory
+    parse (bool): output as parsed datetime tuples. False returns the filenames
+    filename (string): name of a file with .geo filenames
+
+Returns:
+    tuple(date, date) of (early, late) dates for all igrams (if parse=True)
+        if parse=False: returns list[str], filenames of the igrams
+"""
+function find_igrams(;directory::AbstractString=".", parse::Bool=true, filename::AbstractString="")
+    igram_file_list = isempty(filename) ? find_files("*.int", directory) : readlines(filename)
+    return parse ? parse_intlist_strings(igram_fnames) : igram_file_list
+end
+
+
+"""Reads in the list of .geo files used, in time order
+
+Can also pass a filename containing .geo files as lines.
+
+Args:
+    directory (str): path to the geolist file or directory
+    parse (bool): output as parsed datetime tuples. False returns the filenames
+    filename (string): name of a file with .geo filenames
+
+Returns:
+    list[date]: the parse dates of each .geo used, in date order
+
+"""
+# TODO: parsers.Sentinel...
+function find_geos(;directory::AbstractString=".", parse::Bool=true, filename::AbstractString="")
+    geo_file_list = isempty(filename) ? find_files("*.geo", directory) : readlines(filename)
+
+    !parse && return geo_file_list
+
+    # Stripped of path for parser
+    geolist_strings = [splitpath(fname)[2] for fname in geo_file_list]
+
+    return sort(parse_geolist_strings(_strip_geoname.(geolist_strings)))
+
+    # return sorted(parse_geolist_strings([_strip_geoname(geo) for geo in geolist_strings]))
+    # if re.match(r'S1[AB]_\d{8}\.geo', geolist_strings[0]):  # S1A_YYYYmmdd.geo
+    #     return sorted([_parse(_strip_geoname(geo)) for geo in geolist_strings])
+    # elseif re.match(r'\d{8}', geolist_strings[0]):  # YYYYmmdd , just a date string
+    #     return sorted([_parse(geo) for geo in geolist_strings])
+    # else  # Full sentinel product name
+    #     return sorted([apertools.parsers.Sentinel(geo).start_time.date() for geo in geolist_strings])
+    # end
+end
+
+
+"""Leaves just date from format S1A_YYYYmmdd.geo"""
+_strip_geoname(name) = reduce(replace, ["S1A_" => "", "S1B_" => "", ".geo" => ""], init=name)
+
+
 end # module
