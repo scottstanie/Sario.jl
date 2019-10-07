@@ -669,7 +669,9 @@ Returns:
 """
 function find_igrams(;directory::AbstractString=".", parse::Bool=true, filename::AbstractString="")
     igram_file_list = isempty(filename) ? find_files("*.int", directory) : readlines(filename)
-    return parse ? parse_intlist_strings(igram_fnames) : igram_file_list
+    intlist_strings = [splitpath(fname)[end] for fname in igram_file_list]
+    isempty(intlist_strings) && return intlist_strings
+    return parse ? parse_intlist_strings(intlist_strings) : intlist_strings
 end
 
 
@@ -693,7 +695,7 @@ function find_geos(;directory::AbstractString=".", parse::Bool=true, filename::A
     !parse && return geo_file_list
 
     # Stripped of path for parser
-    geolist_strings = [splitpath(fname)[2] for fname in geo_file_list]
+    geolist_strings = [splitpath(fname)[end] for fname in geo_file_list]
 
     return sort(parse_geolist_strings(_strip_geoname.(geolist_strings)))
 
