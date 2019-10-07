@@ -19,6 +19,7 @@ import Glob
 import JSON
 using HDF5
 using Dates
+using Parameters
 
 const DATE_FMT = "yyyymmdd"
 const SENTINEL_EXTS = [".geo", ".cc", ".int", ".amp", ".unw", ".unwflat"]
@@ -92,16 +93,16 @@ function load(filename::AbstractString;
     end
 
     # Sentinel files should have .rsc file: check for dem.rsc, or elevation.rsc
-    rsc_data = _get_rsc_data(filename, rsc_file)
+    demrsc = _get_rsc_data(filename, rsc_file)
 
     if ext in STACKED_FILES
-        return take_looks(load_stacked_img(filename, rsc_data, do_permute=do_permute, return_amp=return_amp),
+        return take_looks(load_stacked_img(filename, demrsc, do_permute=do_permute, return_amp=return_amp),
                           looks...)
     elseif ext in BOOL_EXTS
-        return take_looks(load_bool(filename, rsc_data, do_permute=do_permute), looks...)
+        return take_looks(load_bool(filename, demrsc, do_permute=do_permute), looks...)
     else
-        return take_looks(load_complex(filename, rsc_data, do_permute=do_permute), looks...)
-    # having rsc_data implies that this is not a UAVSAR file, so is complex
+        return take_looks(load_complex(filename, demrsc, do_permute=do_permute), looks...)
+    # having demrsc implies that this is not a UAVSAR file, so is complex
     # TODO: haven"t transferred over UAVSAR functions, so no load_real yet
     end
 
@@ -110,7 +111,7 @@ end
 """Load one element of a file on disk (avoid reading in all of huge file"""
 # TODO: Load a chunk of a file now?
 function load(filename::AbstractString, row_col::Tuple{Int, Int}; rsc_file::Union{AbstractString, Nothing}=nothing)
-    data_type, rsc_data, num_rows, num_cols = _file_info(filename, rsc_file)
+    data_type, demrsc, num_rows, num_cols = _file_info(filename, rsc_file)
 
     row, col = row_col
     _check_bounds(row, col, num_rows, num_cols)
@@ -132,11 +133,12 @@ function _check_bounds(row, col, num_rows, num_cols)
         throw(DomainError((row, col), " out of bounds for $filename of size ($num_rows, $num_cols)"))
     end
 end
+
 function _file_info(filename, rsc_file)
     data_type = _get_data_type(filename)
-    rsc_data = _get_rsc_data(filename, rsc_file)
-    num_rows, num_cols = rsc_data["file_length"], rsc_data["width"]
-    return data_type, rsc_data, num_rows, num_cols
+    demrsc = _get_rsc_data(filename, rsc_file)
+    @unpack rows, cols = demrsc
+    return data_type, demrsc, rows, cols
 end
 
 # NOTE: the subset will only work for sequential data (complex), not the stacked filetypes
@@ -144,7 +146,7 @@ end
 RangeTuple = Tuple{T, T} where { T <: OrdinalRange }
 function load(filename::AbstractString, idxs::RangeTuple; 
               rsc_file::Union{AbstractString, Nothing}=nothing,  do_permute=true)
-    data_type, rsc_data, num_rows, num_cols = _file_info(filename, rsc_file)
+    data_type, demrsc, num_rows, num_cols = _file_info(filename, rsc_file)
 
     # Note: reversing these since julia uses column-major
     cols, rows = idxs
@@ -187,20 +189,21 @@ end
 function _get_rsc_data(filename, rsc_file::Union{AbstractString, Nothing})
     ext = get_file_ext(filename)
 
-    rsc_data = nothing
+    demrsc = nothing
     if !isnothing(rsc_file)
-        rsc_data = load_dem_rsc(rsc_file)
+        demrsc = load_dem_rsc(rsc_file)
     elseif ext in vcat(SENTINEL_EXTS, ELEVATION_EXTS, BOOL_EXTS)
         rsc_file = find_rsc_file(filename)
-        rsc_data = load_dem_rsc(rsc_file)
+        demrsc = load_dem_rsc(rsc_file)
     end
 
-    return rsc_data
+    return demrsc
 end
 
 function find_rsc_file(filename=nothing; directory=nothing, verbose=false)
     if !isnothing(filename)
-        directory = joinpath(splitpath(filename)[1:end-1]...)
+        dir_parts = splitpath(filename)[1:end-1]
+        directory = isempty(dir_parts) ? "." : joinpath(dir_parts...)
     end
     # Should be just elevation.dem.rsc (for .geo folder) or dem.rsc (for igrams)
     possible_rscs = find_files("*.rsc", directory)
@@ -284,17 +287,16 @@ function load_elevation(filename; do_permute=true)
 end
 
 
-function load_complex(filename::AbstractString, rsc_data::Dict{<:AbstractString, Any}; do_permute=true)
-    return _load_bin_matrix(filename, rsc_data, ComplexF32, do_permute)
+function load_complex(filename::AbstractString, demrsc::DemRsc; do_permute=true)
+    return _load_bin_matrix(filename, demrsc, ComplexF32, do_permute)
 end
 
-function load_bool(filename::AbstractString, rsc_data::Dict{<:AbstractString, Any}; do_permute=true)
-    return _load_bin_matrix(filename, rsc_data, Bool, do_permute)
+function load_bool(filename::AbstractString, demrsc::DemRsc; do_permute=true)
+    return _load_bin_matrix(filename, demrsc, Bool, do_permute)
 end
 
-function _load_bin_matrix(filename, rsc_data, dtype, do_permute::Bool)
-    rows = rsc_data["file_length"]
-    cols = rsc_data["width"]
+function _load_bin_matrix(filename, demrsc::DemRsc, dtype, do_permute::Bool)
+    @unpack rows, cols = demrsc
     # Note: must be saved in c/row-major order, so loading needs a transpose
     out = Array{dtype, 2}(undef, (cols, rows))
 
@@ -312,9 +314,8 @@ Format is two stacked matrices:
 For .unw height files, the first is amplitude, second is phase (unwrapped)
 For .cc correlation files, first is amp, second is correlation (0 to 1)
 """
-function load_stacked_img(filename::AbstractString, rsc_data::Dict{<:AbstractString, Any}; do_permute=true, return_amp=false)
-    rows = rsc_data["file_length"]
-    cols = rsc_data["width"]
+function load_stacked_img(filename::AbstractString, demrsc::DemRsc; do_permute=true, return_amp=false)
+    @unpack rows, cols = demrsc
     # Note: must be saved in c/row-major order, so loading needs a transpose
     # out_left usually is amplitude data
     # Usually we are interested in out_right
@@ -323,9 +324,9 @@ function load_stacked_img(filename::AbstractString, rsc_data::Dict{<:AbstractStr
     out = Array{Float32, 2}(undef, (2cols, rows))
     read!(filename, out)
 
-    # TODO: port over rest of code for handling amp (if we care about that)
     out_amp = @view out[1:cols, :]
     out_data = @view out[cols+1:end, :]
+
     if return_amp
         return do_permute ? permutedims(cat(out_amp, out_data, dims=3), (2, 1, 3)) : cat(out_amp, out_data, dims=3)
     else
@@ -504,7 +505,7 @@ function load_stack(; file_list::Union{AbstractArray{AbstractString}, Nothing}=n
         file_list = find_files(file_ext, directory)
     end
 
-    # rsc_data = load(find_rsc_file(basepath=directory))
+    # demrsc = load(find_rsc_file(basepath=directory))
     test_arr = load(file_list[1])
     rows, cols = size(test_arr)
     T = eltype(test_arr)
