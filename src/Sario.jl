@@ -401,7 +401,7 @@ end
 # In HDF5, DemRscs are stored as JSON dicts
 load_dem_from_h5(h5file, dset=DEM_RSC_DSET) = DemRsc(JSON.parse(h5read(h5file, dset)))
 
-function save_dem_to_h5(h5file, dem_rsc::AbstractDict{String, Any}, dset_name=DEM_RSC_DSET; overwrite=true)
+function save_dem_to_h5(h5file, dem_rsc::DemRsc, dset_name=DEM_RSC_DSET; overwrite=true)
     h5open(h5file, "cw") do f
         overwrite && dset_name in names(f) && o_delete(f, dset_name)
 
