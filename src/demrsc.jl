@@ -1,7 +1,7 @@
 
 import Printf: @sprintf
 import OrderedCollections: OrderedDict
-import Base: show, convert, print, keys, iterate
+import Base: show, convert, copy, print, keys, iterate
 
 using Parameters
 
@@ -89,3 +89,4 @@ Base.convert(::Type{DemRsc}, x::OrderedDict{String, Any}) = DemRsc(x)
 Base.convert(::Type{OrderedDict{String, Any}}, x::DemRsc) = stringdict(x)
 Base.convert(::Type{Dict{String, Any}}, x::DemRsc) = stringdict(x)
 
+Base.copy(x::DemRsc) = DemRsc(x)

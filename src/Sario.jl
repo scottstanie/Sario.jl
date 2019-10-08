@@ -180,7 +180,9 @@ function _load_hdf5(h5file::AbstractString, dset_name::AbstractString=""; do_per
                 error("More than 1 dset exists in $h5file, provide name to `load`")
             end
         end
-        return do_permute ? permutedims(read(f, dset_name)) : read(f, dset_name)
+        order = ndims(f[dset_name]) == 3 ? (2, 1, 3) : (2, 1)  # Handle 3D permuting
+        return do_permute ? permutedims(read(f, dset_name), order) : read(f, dset_name)
+        k
     end
 end
 
@@ -397,7 +399,7 @@ function save_geolist_to_h5(h5file::String, object::String, geolist::AbstractArr
 end
 
 # In HDF5, DemRscs are stored as JSON dicts
-load_dem_from_h5(h5file, dset=DEM_RSC_DSET) = JSON.parse(h5read(h5file, dset))
+load_dem_from_h5(h5file, dset=DEM_RSC_DSET) = DemRsc(JSON.parse(h5read(h5file, dset)))
 
 function save_dem_to_h5(h5file, dem_rsc::AbstractDict{String, Any}, dset_name=DEM_RSC_DSET; overwrite=true)
     h5open(h5file, "cw") do f
