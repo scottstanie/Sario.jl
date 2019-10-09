@@ -61,7 +61,7 @@ find_files(ext, directory=".") = sort(Glob.glob("*"*ext, directory))
 """Extracts the file extension, including the "." (e.g.: .slc)"""
 get_file_ext(filename::AbstractString) = splitext(filename)[end]
 
-_is_h5(filename) = Sario.get_file_ext(filename) in (".h5", ".hdf5")
+_is_h5(filename) = get_file_ext(filename) in (".h5", ".hdf5")
 
 import Base.size
 function Base.size(h5file::String, dset::String)
