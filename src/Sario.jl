@@ -61,6 +61,7 @@ find_files(ext, directory=".") = sort(Glob.glob("*"*ext, directory))
 """Extracts the file extension, including the "." (e.g.: .slc)"""
 get_file_ext(filename::AbstractString) = splitext(filename)[end]
 
+_is_h5(filename) = Sario.get_file_ext(filename) in (".h5", ".hdf5")
 
 import Base.size
 function Base.size(h5file::String, dset::String)
@@ -88,7 +89,7 @@ function load(filename::AbstractString;
         return _get_rsc_data(filename, filename)
     elseif ext in ELEVATION_EXTS
         return take_looks(load_elevation(filename), looks...)
-    elseif ext == ".h5"
+    elseif _is_h5(filename)
         return take_looks(_load_hdf5(filename, dset_name; do_permute=do_permute), looks...)
     end
 
