@@ -376,15 +376,12 @@ parse_geolist_strings(geolist_str::AbstractArray{String}) = _parse.(geolist_str)
 
 import Base.string
 string(arr::AbstractArray{Date}, fmt="yyyymmdd") = Dates.format.(arr, fmt)
+string(arr::AbstractArray{Tuple{Date, Date}}, fmt="yyyymmdd") = [Dates.format.(tup, fmt) for tup in arr]
 
 """Save the geolist as a list of strings to an dataset `h5file`"""
 function save_geolist_to_h5(h5file::String, geolist::AbstractArray{Date}; overwrite=false)
-    h5open(h5file, "cw") do f
-        # Delete if exists
-        overwrite && GEOLIST_DSET in names(f) && o_delete(f, GEOLIST_DSET)
-
-        write(f, GEOLIST_DSET, string(geolist))
-    end
+    !check_dset(h5file, GEOLIST_DSET, overwrite) && return
+    h5write(h5file, GEOLIST_DSET, string(geolist))
 end
 
 """In this version, save the geolist to an attribute of `object` already in `h5file`"""
@@ -392,21 +389,25 @@ function save_geolist_to_h5(h5file::String, object::String, geolist::AbstractArr
     h5open(h5file, "cw") do f
         obj = f[object]
         # Delete if exists
+        # TODO: wrap this attr one into check_dset
         overwrite && exists(attrs(obj), GEOLIST_DSET) && a_delete(obj, GEOLIST_DSET)
 
         attrs(obj)[GEOLIST_DSET] = string(geolist)
     end
 end
 
+"""Save the geolist as a list of strings to an dataset `h5file`"""
+function save_intlist_to_h5(h5file::String, intlist::AbstractArray{Tuple{Date, Date}}; overwrite=false)
+    !check_dset(h5file, INTLIST_DSET, overwrite) && return
+    h5write(h5file, INTLIST_DSET, string(intlist))
+end
+
 # In HDF5, DemRscs are stored as JSON dicts
 load_dem_from_h5(h5file, dset=DEM_RSC_DSET) = DemRsc(JSON.parse(h5read(h5file, dset)))
 
 function save_dem_to_h5(h5file, dem_rsc::DemRsc, dset_name=DEM_RSC_DSET; overwrite=true)
-    h5open(h5file, "cw") do f
-        overwrite && dset_name in names(f) && o_delete(f, dset_name)
-
-        write(f, dset_name, JSON.json(dem_rsc))
-    end
+    !check_dset(h5file, dset_name, overwrite) && return
+    h5write(h5file, dset_name, JSON.json(dem_rsc))
 end
 # TODO:
 # save_dem_to_h5(h5file, dem_rsc::DemRsc, dset_name=DEM_RSC_DSET; overwrite=true)
