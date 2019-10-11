@@ -576,7 +576,9 @@ end
 function save(filename::AbstractString, array; do_permute=true, kwargs...)
     ext = get_file_ext(filename)
 
-    if ext in BOOL_EXTS
+    if ext == ".rsc"
+        write(filename, string(array))  # array here should be a DemRsc
+    elseif ext in BOOL_EXTS
         tofile(filename, array, do_permute=do_permute)
     elseif (ext in vcat(COMPLEX_EXTS, REAL_EXTS, ELEVATION_EXTS)) && (!(ext in STACKED_FILES))
         tofile(filename, _force_float32(array), do_permute=do_permute)
