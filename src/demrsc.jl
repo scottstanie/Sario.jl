@@ -68,7 +68,7 @@ function format_dem_rsc(demrsc::DemRsc)
 
     return outstring
 end
-Base.print(io::IO, x::DemRsc) = print(format_dem_rsc(x))
+Base.print(io::IO, x::DemRsc) = print(io, format_dem_rsc(x))
 
 # For use in unpacking
 _symdict(d::AbstractDict{String, Any}) = Dict(Symbol(k) => v for (k, v) in d)
