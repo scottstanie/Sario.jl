@@ -400,8 +400,10 @@ end
 """Save the geolist as a list of strings to an dataset `h5file`"""
 function save_intlist_to_h5(h5file::String, intlist::AbstractArray{Tuple{Date, Date}}; overwrite=false)
     !check_dset(h5file, INTLIST_DSET, overwrite) && return
-    h5write(h5file, INTLIST_DSET, string(intlist))
+    h5write(h5file, INTLIST_DSET, _intlist_to_strings(intlist))
 end
+# 
+_intlist_to_strings(intlist::AbstractArray{Tuple{Date, Date}})::AbstractArray{String, 2} = hcat([collect(tup) for tup in string(intlist)]...)
 
 # In HDF5, DemRscs are stored as JSON dicts
 load_dem_from_h5(h5file, dset=DEM_RSC_DSET) = DemRsc(JSON.parse(h5read(h5file, dset)))
