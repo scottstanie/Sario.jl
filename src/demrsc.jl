@@ -35,7 +35,7 @@ DemRsc(width, file_length, x_first, y_first,
                                 x_step=x_step, y_step=y_step)
 
 
-Base.size(d::DemRsc) = (rows, cols)
+Base.size(d::DemRsc) = (d.rows, d.cols)
 Base.size(d::DemRsc, n::Int) = Base.size(d)[n]
 
 function Base.iterate(d::DemRsc)
