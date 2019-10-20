@@ -1,7 +1,7 @@
 
 import Printf: @sprintf
 import OrderedCollections: OrderedDict
-import Base: show, convert, copy, print, keys, iterate
+import Base: size, show, convert, copy, print, keys, iterate
 
 using Parameters
 
@@ -34,6 +34,9 @@ DemRsc(width, file_length, x_first, y_first,
                                 x_first=x_first, y_first=y_first, 
                                 x_step=x_step, y_step=y_step)
 
+
+Base.size(d::DemRsc) = (rows, cols)
+Base.size(d::DemRsc, n::Int) = Base.size(d)[n]
 
 function Base.iterate(d::DemRsc)
     return (Pair(PRINT_FIELDS[1], getproperty(d, PRINT_FIELDS[1])), 2)
