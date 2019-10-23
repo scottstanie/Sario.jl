@@ -216,7 +216,7 @@ function find_rsc_file(filename=nothing; directory=nothing, verbose=false)
         println(possible_rscs)
     end
     if length(possible_rscs) < 1
-        logger.info("No .rsc file found in $directory")
+        println("No .rsc file found in $directory")
         return nothing
     elseif length(possible_rscs) > 1
         error("$filename has multiple .rsc files in its directory: $possible_rscs")
