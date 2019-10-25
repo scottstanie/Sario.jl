@@ -273,7 +273,7 @@ function load_elevation(filename; do_permute=true)
     if ext == ".dem"
         rsc_file = find_rsc_file(filename)
         dem_rsc = load(rsc_file)
-        rows, cols = (dem_rsc["file_length"], dem_rsc["width"])
+        rows, cols = (dem_rsc.file_length, dem_rsc.width)
         data = Array{data_type, 2}(undef, (cols, rows))
 
         read!(filename, data)
