@@ -642,7 +642,13 @@ function take_looks(image::AbstractArray{T}, row_looks, col_looks) where {T <: N
     nc = div(ncols, col_looks)
 
     # Can't sum into a Bool array
-    T == Bool ? outtype = Float32 : outtype = T
+    if T == Bool
+        outtype = Float32
+    elseif T == Int16
+        outtype = Int64  # Incase we take many looks for Int16 overflow
+    else
+        outtype = T
+    end
     out = zeros(outtype, nr, nc)
 
     @inbounds Threads.@threads for j = 1:nc
@@ -654,7 +660,7 @@ function take_looks(image::AbstractArray{T}, row_looks, col_looks) where {T <: N
     end
 
     out ./= (row_looks * col_looks)
-    return T == Bool ? Bool.(out .> 0) : out
+    return T == Bool ? Bool.(out .> 0) : T.(out)
 end
 
 # If we pass something else like a dem_rsc
