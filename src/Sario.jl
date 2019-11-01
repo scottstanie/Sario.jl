@@ -651,6 +651,17 @@ function take_looks(image::AbstractArray{T}, row_looks, col_looks) where {T <: N
         outtype = T
     end
     out = zeros(outtype, nr, nc)
+    return take_looks!(out, image, row_looks, col_looks)
+end
+
+function take_looks!(out::AbstractArray{S}, image::AbstractArray{T}, row_looks, col_looks) where {S, T <: Number}
+    # Check that output is compatible
+    nrows, ncols = size(image)
+    nr = div(nrows, row_looks)
+    nc = div(ncols, col_looks)
+    (nr, nc) != size(out) && error("""
+        Size of `out` $(size(out)) doesnt match taking ($row_looks, $col_looks) 
+        looks on image size $(size(image))""")
     return take_looks!(out, image, row_looks, col_looks, nr, nc)
 end
 
