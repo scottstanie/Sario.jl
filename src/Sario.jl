@@ -673,8 +673,18 @@ function take_looks!(out::AbstractArray{S}, image::AbstractArray{T}, row_looks, 
     end 
 end
 
-# If we pass something else like a dem_rsc
-take_looks(other, row_looks, col_looks) = other
+function take_looks(demrsc::DemRsc, row_looks, col_looks)
+    nrows, ncols = size(demrsc)
+    newr = div(nrows, row_looks)
+    newc = div(ncols, col_looks)
+    new_x_step = demrsc.x_step * col_looks
+    new_y_step = demrsc.y_step * row_looks
+    return DemRsc(demrsc, file_length=newr, rows=newr, y_step=new_y_step,
+                  width=newc, cols=newc, x_step=new_x_step)
+end
+
+# If we pass anything else:
+# take_looks(other, row_looks, col_looks) = other
 
 # For future:
 # cc_patch(a, b) = real(abs(sum(a .* conj.(b))) / sqrt(sum(a .* conj.(a)) * sum(b .* conj.(b))))
