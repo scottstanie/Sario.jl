@@ -644,7 +644,10 @@ function take_looks(image::AbstractArray{T}, row_looks, col_looks) where {T <: N
     # Can't sum into a Bool array
     T == Bool ? outtype = Float32 : outtype = T
     out = zeros(outtype, nr, nc)
+    return take_looks!(out, image, row_looks, col_looks, nr, nc)
+end
 
+function take_looks!(out::AbstractArray{T}, image::AbstractArray{T}, row_looks, col_looks, nr, nc) where {T <: Number}
     @inbounds Threads.@threads for j = 1:nc
         @inbounds for i = 1:nr
             indx_i = 1+(i-1)*row_looks:i*row_looks
