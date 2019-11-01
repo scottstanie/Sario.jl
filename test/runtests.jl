@@ -47,5 +47,5 @@ using Test
     @test all(Sario.take_looks!(out, a, 1, 2, 2, 1) .≈ [0.055; 3.5])
 
     b = reshape(collect(1:12), 3, 4)
-    @test all(Sario.take_looks(b, 1, 2) .≈ [0.055; 3.5])
+    @test all(Sario.take_looks(b, 1, 2) .≈ [2   8 ; 4  10 ; 4  10 ])
 end
