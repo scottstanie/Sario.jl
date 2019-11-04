@@ -70,11 +70,16 @@ function Base.size(h5file::String, dset::String)
     end
 end
 
-"""Examines file type for real/complex and runs appropriate load
+"""
+    load(filename::AbstractString; 
+         rsc_file::Union{AbstractString, Nothing}=nothing,
+         looks::Tuple{Int, Int}=(1, 1), do_permute=true, 
+         dset_name::AbstractString="", return_amp::Bool=false)
 
-Raises:
-    ValueError: if sentinel files loaded without a .rsc file in same path
-        to give the file width
+Main entry point to loading files.
+
+Examines file type of `filename` and runs appropriate load function.
+
 """
 function load(filename::AbstractString; 
               rsc_file::Union{AbstractString, Nothing}=nothing,

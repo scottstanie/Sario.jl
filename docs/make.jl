@@ -11,3 +11,7 @@ makedocs(;
     authors="scott <scott.stanie@gmail.com>",
     assets=String[],
 )
+
+deploydocs(
+    repo = "github.com/scottstanie/Sario.jl.git",
+)

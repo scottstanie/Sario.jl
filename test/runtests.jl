@@ -1,11 +1,10 @@
-try
-    using Dates
-    import Sario
-catch
-    println("import error")
-    include("../src/Sario.jl")
-end
+using Sario
+using Dates
 using Test
+using Documenter
+
+DocMeta.setdocmeta!(Sario, :DocTestSetup, :(using Sario;); recursive=true)
+
 
 @testset "Sario.jl" begin
     # Write your own tests here.
