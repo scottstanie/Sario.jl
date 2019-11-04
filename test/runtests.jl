@@ -48,3 +48,10 @@ DocMeta.setdocmeta!(Sario, :DocTestSetup, :(using Sario;); recursive=true)
     b = reshape(collect(1:12), 3, 4)
     @test all(Sario.take_looks(b, 1, 2) .≈ [2   8 ; 4  10 ; 4  10 ])
 end
+
+
+@testset "DemRsc" begin
+    demrsc = DemRsc(x_first=1.0, y_first=2.0, x_step=0.1, y_step=-0.2, file_length=6, width=5)
+    @test demrsc.width == demrsc.cols == 5
+    @test demrsc.file_length == demrsc.rows == 6
+end
