@@ -91,7 +91,7 @@ function load(filename::AbstractString;
     if ext in NOT_IMPLEMENTED
         error("$ext is not yet implemented")
     elseif ext == ".rsc"
-        return _get_rsc_data(filename, filename)
+        return take_looks(get_rsc_data(filename, filename), looks...)
     elseif ext in ELEVATION_EXTS
         return take_looks(load_elevation(filename), looks...)
     elseif _is_h5(filename)
