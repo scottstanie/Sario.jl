@@ -649,7 +649,7 @@ function take_looks(image::AbstractArray{T}, row_looks, col_looks) where {T <: N
     if T == Bool
         # Can't sum into a Bool array
         outtype = Float32
-    elseif T <: Int
+    elseif T <: Integer
         # Incase we take many looks for Int16 overflow, and to avoid InexactError
         outtype = Float64
     else
@@ -682,7 +682,7 @@ function take_looks!(out::AbstractArray{S}, image::AbstractArray{T}, row_looks, 
     out ./= (row_looks * col_looks)
     if T == Bool
         return Bool.(out .> 0)
-    elseif T <: Int
+    elseif T <: Integer
         return T.(round.(out))
     else
         return T.(out)
