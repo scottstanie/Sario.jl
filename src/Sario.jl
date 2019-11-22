@@ -118,8 +118,11 @@ end
 
 function _check_filesize(fname, data_type, dsize)
     fsize = Int(filesize(fname) / sizeof(data_type))
+    # The stacked files have 2x the number of pixels of Floats- needs to be scaled to match dem.rsc
+    fsize = get_file_ext(fname) in STACKED_FILES ? fsize/2 : fsize
     @assert prod(dsize) == fsize ".rsc size $dsize does not match $fname size $fsize"
 end
+
 
 """Load one element of a file on disk (avoid reading in all of huge file"""
 # TODO: Load a chunk of a file now?
@@ -148,6 +151,8 @@ function _check_bounds(row, col, num_rows, num_cols)
 end
 
 function _file_info(filename, rsc_file)
+    @assert isfile(filename) "$filename does not exist."
+
     data_type = _get_data_type(filename)
     demrsc = _get_rsc_data(filename, rsc_file)
     @unpack rows, cols = demrsc
@@ -258,6 +263,8 @@ function _get_data_type(filename)
         return Int16
     elseif ext in STACKED_FILES
         return Float32
+    elseif ext in BOOL_FILES
+        return Bool
     else
         return ComplexF32
     end
