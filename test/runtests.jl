@@ -6,7 +6,7 @@ using Documenter
 DocMeta.setdocmeta!(Sario, :DocTestSetup, :(using Sario;); recursive=true)
 
 
-@testset "Sario.jl" begin
+@testset "loading" begin
     demfile = joinpath(@__DIR__, "elevation.dem")
 
     dem = Sario.load(demfile)
@@ -36,7 +36,17 @@ DocMeta.setdocmeta!(Sario, :DocTestSetup, :(using Sario;); recursive=true)
                                        ("20160101", "20170101")]) == expected_ints
     @test Sario.parse_intlist_strings(["20150101_20160101.int", "20160101_20170101.int"]) == expected_ints
 
+    # Unws
+    unwfile = joinpath(@__DIR__, "testfile.unw")
+    @test Sario.load(unwfile)[1:2, 1:3] ≈ [2.07206  1.57548  1.33183 ; 2.09438  2.00096  1.40108]
 
+    intfile = joinpath(@__DIR__, "testfile.int")
+    @test Sario.load(intfile)[1:2, 1:3] ≈ [-42739.2+77998.7im -386.675+82609.3im 23287.7+95590.0im; 
+                                           -53225.5+92191.6im -38782.8+84526.9im 12128.7+70777.0im];
+    # TODO: add cc, other types
+end
+
+@testset "extras" begin
     # Take looks test
     a = [.1  0.01  2 ; 3  4  1 + 1im]
 
