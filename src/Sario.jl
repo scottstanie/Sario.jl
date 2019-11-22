@@ -28,7 +28,7 @@ const REAL_EXTS = [".amp", ".cor", ".mlc", ".grd"]
 const ELEVATION_EXTS = [".dem", ".hgt"]
 # These file types are not simple complex matrices: see load_stacked_img for detail
 # .unwflat are same as .unw, but with a linear ramp removed
-const STACKED_FILES = [".cc", ".unw", ".unwflat"]
+const STACKED_EXTS = [".cc", ".unw", ".unwflat"]
 const BOOL_EXTS = [".mask"]
 
 const IMAGE_EXTS = [".png", ".tif", ".tiff", ".jpg"]
@@ -103,7 +103,7 @@ function load(filename::AbstractString;
 
     if ext in ELEVATION_EXTS
         return take_looks(load_elevation(filename, demrsc, do_permute=do_permute), looks...)
-    elseif ext in STACKED_FILES
+    elseif ext in STACKED_EXTS
         return take_looks(load_stacked_img(filename, demrsc, do_permute=do_permute, return_amp=return_amp),
                           looks...)
     elseif ext in BOOL_EXTS
@@ -119,7 +119,7 @@ end
 function _check_filesize(fname, data_type, dsize)
     fsize = Int(filesize(fname) / sizeof(data_type))
     # The stacked files have 2x the number of pixels of Floats- needs to be scaled to match dem.rsc
-    fsize = get_file_ext(fname) in STACKED_FILES ? fsize/2 : fsize
+    fsize = get_file_ext(fname) in STACKED_EXTS ? fsize/2 : fsize
     @assert prod(dsize) == fsize ".rsc size $dsize does not match $fname size $fsize"
 end
 
@@ -261,9 +261,9 @@ function _get_data_type(filename)
     ext = get_file_ext(filename)
     if ext in ELEVATION_EXTS
         return Int16
-    elseif ext in STACKED_FILES
+    elseif ext in STACKED_EXTS
         return Float32
-    elseif ext in BOOL_FILES
+    elseif ext in BOOL_EXTS
         return Bool
     else
         return ComplexF32
@@ -605,9 +605,9 @@ function save(filename::AbstractString, array; do_permute=true, kwargs...)
         write(filename, string(array))  # array here should be a DemRsc
     elseif ext in BOOL_EXTS
         tofile(filename, array, do_permute=do_permute)
-    elseif (ext in vcat(COMPLEX_EXTS, REAL_EXTS, ELEVATION_EXTS)) && (!(ext in STACKED_FILES))
+    elseif (ext in vcat(COMPLEX_EXTS, REAL_EXTS, ELEVATION_EXTS)) && (!(ext in STACKED_EXTS))
         tofile(filename, _force_float32(array), do_permute=do_permute)
-    elseif ext in STACKED_FILES
+    elseif ext in STACKED_EXTS
         # ndims(array) != 3 && throw(DimensionMismatch("array must be 3D [amp; data] to save as $filename"))
         if ndims(array) == 3
             amp = view(array, :, :, 1)
@@ -724,7 +724,10 @@ end
 # cc_patch(a, b) = real(abs(sum(a .* conj.(b))) / sqrt(sum(a .* conj.(a)) * sum(b .* conj.(b))))
 
 
-"""Reads the list of igrams to returns Array of Igrams
+"""
+    find_igrams(;directory::AbstractString=".", parse::Bool=true, filename::AbstractString="")
+
+Reads the list of igrams to returns Array of Igrams
 
 Args:
     directory (str): path to the igram directory
