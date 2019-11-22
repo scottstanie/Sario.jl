@@ -92,16 +92,18 @@ function load(filename::AbstractString;
         error("$ext is not yet implemented")
     elseif ext == ".rsc"
         return take_looks(_get_rsc_data(filename, filename), looks...)
-    elseif ext in ELEVATION_EXTS
-        return take_looks(load_elevation(filename), looks...)
     elseif _is_h5(filename)
         return take_looks(_load_hdf5(filename, dset_name; do_permute=do_permute), looks...)
     end
 
     # Sentinel files should have .rsc file: check for dem.rsc, or elevation.rsc
-    demrsc = _get_rsc_data(filename, rsc_file)
+    data_type, demrsc, num_rows, num_cols = _file_info(filename, rsc_file)
+    # If the filesize doesn't match the .rsc, error
+    _check_filesize(filename, data_type, (num_rows, num_cols))
 
-    if ext in STACKED_FILES
+    if ext in ELEVATION_EXTS
+        return take_looks(load_elevation(filename, demrsc, do_permute=do_permute), looks...)
+    elseif ext in STACKED_FILES
         return take_looks(load_stacked_img(filename, demrsc, do_permute=do_permute, return_amp=return_amp),
                           looks...)
     elseif ext in BOOL_EXTS
@@ -112,6 +114,11 @@ function load(filename::AbstractString;
     # TODO: haven"t transferred over UAVSAR functions, so no load_real yet
     end
 
+end
+
+function _check_filesize(fname, data_type, dsize)
+    fsize = Int(filesize(fname) / sizeof(data_type))
+    @assert prod(dsize) == fsize ".rsc size $dsize does not match $fname size $fsize"
 end
 
 """Load one element of a file on disk (avoid reading in all of huge file"""
@@ -271,27 +278,16 @@ so either manually set data(data == np.min(data)) = 0,
 or something like 
     data = clamp(data, -10000, Inf)
 """
-function load_elevation(filename; do_permute=true)
-    ext = get_file_ext(filename)
-    data_type = Int16 
+function load_elevation(filename, demrsc::DemRsc; do_permute=true)
+    rows, cols = (demrsc.file_length, demrsc.width)
+    data = Array{Int16, 2}(undef, (cols, rows))
+    read!(filename, data)
 
-    if ext == ".dem"
-        rsc_file = find_rsc_file(filename)
-        dem_rsc = load(rsc_file)
-        rows, cols = (dem_rsc.file_length, dem_rsc.width)
-        data = Array{data_type, 2}(undef, (cols, rows))
-
-        read!(filename, data)
-
-        # # TODO: Verify that the min real value will be above -1000
-        # min_valid = -10000
-        # # Set NaN values to 0
-        # @. data[data < min_valid] = 0
-        return do_permute ? permutedims(data) : data
-    else
-        # swap_bytes = (ext == ".hgt")
-        throw("$ext not implemented")
-    end
+    # # TODO: Verify that the min real value will be above -1000
+    # min_valid = -10000
+    # # Set NaN values to 0
+    # @. data[data < min_valid] = 0
+    return do_permute ? permutedims(data) : data
 end
 
 
@@ -413,12 +409,12 @@ _intlist_to_strings(intlist::AbstractArray{Tuple{Date, Date}})::AbstractArray{St
 # In HDF5, DemRscs are stored as JSON dicts
 load_dem_from_h5(h5file, dset=DEM_RSC_DSET) = DemRsc(JSON.parse(h5read(h5file, dset)))
 
-function save_dem_to_h5(h5file, dem_rsc::DemRsc, dset_name=DEM_RSC_DSET; overwrite=true)
+function save_dem_to_h5(h5file, demrsc::DemRsc, dset_name=DEM_RSC_DSET; overwrite=true)
     !check_dset(h5file, dset_name, overwrite) && return
-    h5write(h5file, dset_name, JSON.json(dem_rsc))
+    h5write(h5file, dset_name, JSON.json(demrsc))
 end
 # TODO:
-# save_dem_to_h5(h5file, dem_rsc::DemRsc, dset_name=DEM_RSC_DSET; overwrite=true)
+# save_dem_to_h5(h5file, demrsc::DemRsc, dset_name=DEM_RSC_DSET; overwrite=true)
 
 function save_hdf5_stack(h5file::AbstractString, dset_name::AbstractString, stack; overwrite::Bool=false, do_permute=true)
     # TODO: is there a way to combine this with normal saving of files?
