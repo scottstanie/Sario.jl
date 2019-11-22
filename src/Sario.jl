@@ -320,8 +320,9 @@ end
 https://web.stanford.edu/group/radar/softwareandlinks/sw/snaphu/snaphu_man1.html#FILE%20FORMATS
 
 Format is two stacked matrices:
-    [[first], [second]] where the first "cols" number of floats
-    are the first matrix, next "cols" are second, etc.
+[[first], [second]] where the first "cols" number of floats
+are the first matrix, next "cols" are second, etc.
+
 For .unw height files, the first is amplitude, second is phase (unwrapped)
 For .cc correlation files, first is amp, second is correlation (0 to 1)
 """
@@ -387,7 +388,10 @@ import Base.string
 string(arr::AbstractArray{Date}, fmt="yyyymmdd") = Dates.format.(arr, fmt)
 string(arr::AbstractArray{Tuple{Date, Date}}, fmt="yyyymmdd") = [Dates.format.(tup, fmt) for tup in arr]
 
-"""Save the geolist as a list of strings to an dataset `h5file`"""
+"""
+    save_geolist_to_h5(h5file::String, geolist::AbstractArray{Date}; overwrite=false)
+
+Save the geolist as a list of strings to an dataset `h5file`"""
 function save_geolist_to_h5(h5file::String, geolist::AbstractArray{Date}; overwrite=false)
     !check_dset(h5file, GEOLIST_DSET, overwrite) && return
     h5write(h5file, GEOLIST_DSET, string(geolist))
@@ -454,7 +458,7 @@ function load_hdf5_stack(h5file::AbstractString, dset_name::AbstractString, vali
     end
 end
 
-"""Sum the 3rd dim (layers) of a stack"""
+"""Sum the 3rd dim (layers) of a stack without loading all into memory"""
 function sum_hdf5_stack(h5file::AbstractString, dset_name::AbstractString, valid_layer_idxs)
     rows, cols, _ = size(h5file, dset_name)
     # For summing, using int instead of bool
@@ -583,6 +587,17 @@ end
 # end
 
 
+"""
+    save(filename::AbstractString, array; do_permute=true, kwargs...)
+
+Saves a 2D/3D array as `filename`.
+If the file was loaded with `do_permute=false`, it should also be
+saved as `do_permute=false` 
+
+For stacked files, the expected format of `array` is a 3D stack with
+`array[:,:,1]` being the amplitude image, `array[:,:,2]` being the data.
+If only a 2D image is passed, an dummy amplitude image of all 1s is made.
+"""
 function save(filename::AbstractString, array; do_permute=true, kwargs...)
     ext = get_file_ext(filename)
 
