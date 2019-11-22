@@ -7,8 +7,6 @@ DocMeta.setdocmeta!(Sario, :DocTestSetup, :(using Sario;); recursive=true)
 
 
 @testset "Sario.jl" begin
-    # Write your own tests here.
-
     demfile = joinpath(@__DIR__, "elevation.dem")
 
     dem = Sario.load(demfile)
@@ -27,6 +25,9 @@ DocMeta.setdocmeta!(Sario, :DocTestSetup, :(using Sario;); recursive=true)
 
     @test Sario.load(demfile, (2:4, 2:4)) == dem[2:4, 2:4]
     @test Sario.load(demfile, (2:4, 2:4)) == Sario.load(demfile)[2:4, 2:4]
+
+    dembig = joinpath(@__DIR__, "elevation_toobig.dem")
+    @test_throws AssertionError Sario.load(dembig)
 
     expected_ints = [(Date(2015,1,1), Date(2016,1,1)),
                      (Date(2016,1,1), Date(2017,1,1))]
