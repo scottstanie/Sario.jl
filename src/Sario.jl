@@ -346,13 +346,13 @@ function load_stacked_img(filename::AbstractString, demrsc::DemRsc; do_permute=t
     end
 end
 
-function load_geolist_from_h5(h5file::AbstractString)
-    geo_strings = h5read(h5file, GEOLIST_DSET)
+function load_geolist_from_h5(h5file::AbstractString; geolist_dset=GEOLIST_DSET)
+    geo_strings = h5read(h5file, geolist_dset)
     return parse_geolist_strings(geo_strings)
 end
 
-function load_geolist_from_h5(h5file::AbstractString, dset::AbstractString)
-    geo_strings = h5readattr(h5file, dset)[GEOLIST_DSET]
+function load_geolist_from_h5(h5file::AbstractString, dset::AbstractString; geolist_dset=GEOLIST_DSET)
+    geo_strings = h5readattr(h5file, dset)[geolist_dset]
     return parse_geolist_strings(geo_strings)
 end
 
