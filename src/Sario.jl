@@ -236,10 +236,11 @@ function find_rsc_file(filename=nothing; directory=nothing, verbose=false)
         println("No .rsc file found in $directory")
         return nothing
     elseif length(possible_rscs) > 1
-        fileonly = splitpath(filename)[end]
-        rscbases = [splitpath(r)[end] for r in possible_rscs]
-        if any(startswith(r, fileonly) for r in rscbases)
-            possible_rscs = [r for r in rscbases if startswith(r, fileonly)]
+        pathlist = splitpath(filename)
+        filepath, fileonly = joinpath(pathlist[1:end-1]...), pathlist[end]
+        rsc_nopaths = [splitpath(r)[end] for r in possible_rscs]
+        if any(startswith(r, fileonly) for r in rsc_nopaths)
+            possible_rscs = [joinpath(filepath, r) for r in rsc_nopaths if startswith(r, fileonly)]
         else
             error("$filename has multiple .rsc files in its directory: $possible_rscs")
         end
