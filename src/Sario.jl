@@ -56,7 +56,7 @@ RSC_KEY_TYPES = [
 RSC_KEYS = [tup[1] for tup in RSC_KEY_TYPES]
 
 
-find_files(ext, directory=".") = sort(Glob.glob("*"*ext, directory))
+find_files(ext, directory = ".") = sort(Glob.glob("*" * ext, directory))
 
 """Extracts the file extension, including the "." (e.g.: .slc)"""
 get_file_ext(filename::AbstractString) = splitext(filename)[end]
@@ -82,9 +82,9 @@ Examines file type of `filename` and runs appropriate load function.
 
 """
 function load(filename::AbstractString; 
-              rsc_file::Union{AbstractString, Nothing}=nothing,
-              looks::Tuple{Int, Int}=(1, 1), do_permute=true, 
-              dset_name::AbstractString="", return_amp::Bool=false)
+              rsc_file::Union{AbstractString,Nothing} = nothing,
+              looks::Tuple{Int,Int} = (1, 1), do_permute = true, 
+              dset_name::AbstractString = "", return_amp::Bool = false)
     ext = get_file_ext(filename)
 
     # For now, just pass through unimplemented extensions to Python
@@ -93,7 +93,7 @@ function load(filename::AbstractString;
     elseif ext == ".rsc"
         return take_looks(_get_rsc_data(filename, filename), looks...)
     elseif _is_h5(filename)
-        return take_looks(_load_hdf5(filename, dset_name; do_permute=do_permute), looks...)
+        return take_looks(_load_hdf5(filename, dset_name; do_permute = do_permute), looks...)
     end
 
     # Sentinel files should have .rsc file: check for dem.rsc, or elevation.rsc
@@ -102,14 +102,14 @@ function load(filename::AbstractString;
     _check_filesize(filename, data_type, (num_rows, num_cols))
 
     if ext in ELEVATION_EXTS
-        return take_looks(load_elevation(filename, demrsc, do_permute=do_permute), looks...)
+        return take_looks(load_elevation(filename, demrsc, do_permute = do_permute), looks...)
     elseif ext in STACKED_EXTS
-        return take_looks(load_stacked_img(filename, demrsc, do_permute=do_permute, return_amp=return_amp),
+        return take_looks(load_stacked_img(filename, demrsc, do_permute = do_permute, return_amp = return_amp),
                           looks...)
     elseif ext in BOOL_EXTS
-        return take_looks(load_bool(filename, demrsc, do_permute=do_permute), looks...)
+        return take_looks(load_bool(filename, demrsc, do_permute = do_permute), looks...)
     else
-        return take_looks(load_complex(filename, demrsc, do_permute=do_permute), looks...)
+        return take_looks(load_complex(filename, demrsc, do_permute = do_permute), looks...)
     # having demrsc implies that this is not a UAVSAR file, so is complex
     # TODO: haven"t transferred over UAVSAR functions, so no load_real yet
     end
@@ -119,14 +119,14 @@ end
 function _check_filesize(fname, data_type, dsize)
     fsize = Int(filesize(fname) / sizeof(data_type))
     # The stacked files have 2x the number of pixels of Floats- needs to be scaled to match dem.rsc
-    fsize = get_file_ext(fname) in STACKED_EXTS ? fsize/2 : fsize
+    fsize = get_file_ext(fname) in STACKED_EXTS ? fsize / 2 : fsize
     @assert prod(dsize) == fsize ".rsc size $dsize does not match $fname size $fsize"
 end
 
 
 """Load one element of a file on disk (avoid reading in all of huge file"""
 # TODO: Load a chunk of a file now?
-function load(filename::AbstractString, row_col::Tuple{Int, Int}; rsc_file::Union{AbstractString, Nothing}=nothing)
+function load(filename::AbstractString, row_col::Tuple{Int,Int}; rsc_file::Union{AbstractString,Nothing} = nothing)
     data_type, demrsc, num_rows, num_cols = _file_info(filename, rsc_file)
 
     row, col = row_col
@@ -161,9 +161,9 @@ end
 
 # NOTE: the subset will only work for sequential data (complex), not the stacked filetypes
 """Load subset of a file on disk using range"""
-RangeTuple = Tuple{T, T} where { T <: OrdinalRange }
+RangeTuple = Tuple{T,T} where {T <: OrdinalRange}
 function load(filename::AbstractString, idxs::RangeTuple; 
-              rsc_file::Union{AbstractString, Nothing}=nothing,  do_permute=true)
+              rsc_file::Union{AbstractString,Nothing} = nothing,  do_permute = true)
     data_type, demrsc, num_rows, num_cols = _file_info(filename, rsc_file)
 
     # Note: reversing these since julia uses column-major
@@ -188,7 +188,7 @@ function load(filename::AbstractString, idxs::RangeTuple;
     return do_permute ? permutedims(out) : out
 end
 
-function _load_hdf5(h5file::AbstractString, dset_name::AbstractString=""; do_permute=true)
+function _load_hdf5(h5file::AbstractString, dset_name::AbstractString = ""; do_permute = true)
     h5open(h5file, "r") do f
         if isempty(dset_name)
             if length(names(f)) == 1 && typeof(f[names(f)[1]]) == HDF5Dataset
@@ -206,7 +206,7 @@ end
 
 
 """Handle getting the .rsc data from either an image filename, or .rsc filename"""
-function _get_rsc_data(filename, rsc_file::Union{AbstractString, Nothing})
+function _get_rsc_data(filename, rsc_file::Union{AbstractString,Nothing})
     ext = get_file_ext(filename)
 
     demrsc = nothing
@@ -216,13 +216,13 @@ function _get_rsc_data(filename, rsc_file::Union{AbstractString, Nothing})
         rsc_file = find_rsc_file(filename)
         demrsc = load_dem_rsc(rsc_file)
     end
-
+    
     return demrsc
 end
 
-function find_rsc_file(filename=nothing; directory=nothing, verbose=false)
+function find_rsc_file(filename = nothing; directory = nothing, verbose = false)
     if !isnothing(filename)
-        dir_parts = splitpath(filename)[1:end-1]
+        dir_parts = splitpath(filename)[1:end - 1]
         directory = isempty(dir_parts) ? "." : joinpath(dir_parts...)
     end
     # Should be just elevation.dem.rsc (for .geo folder) or dem.rsc (for igrams)
@@ -237,7 +237,11 @@ function find_rsc_file(filename=nothing; directory=nothing, verbose=false)
         return nothing
     elseif length(possible_rscs) > 1
         pathlist = splitpath(filename)
-        filepath, fileonly = joinpath(pathlist[1:end-1]...), pathlist[end]
+        if length(pathlist) == 1
+            filepath, fileonly = ".", pathlist[1]
+        else
+            filepath, fileonly = joinpath(pathlist[1:end - 1]...), pathlist[end]
+        end
         rsc_nopaths = [splitpath(r)[end] for r in possible_rscs]
         if any(startswith(r, fileonly) for r in rsc_nopaths)
             possible_rscs = [joinpath(filepath, r) for r in rsc_nopaths if startswith(r, fileonly)]
@@ -251,7 +255,7 @@ end
 """Convert the text file into the DemRsc struct
 Starts with a dict to gather all fiields, then unpacks using keywords args"""
 function load_dem_rsc(filename, kwargs...)::DemRsc
-    output_data = Dict{Symbol, Any}()
+    output_data = Dict{Symbol,Any}()
 
     for line in readlines(filename)
         for (field, valtype) in RSC_KEY_TYPES
@@ -292,9 +296,9 @@ so either manually set data(data == np.min(data)) = 0,
 or something like 
     data = clamp(data, -10000, Inf)
 """
-function load_elevation(filename, demrsc::DemRsc; do_permute=true)
+function load_elevation(filename, demrsc::DemRsc; do_permute = true)
     rows, cols = (demrsc.file_length, demrsc.width)
-    data = Array{Int16, 2}(undef, (cols, rows))
+    data = Array{Int16,2}(undef, (cols, rows))
     read!(filename, data)
 
     # # TODO: Verify that the min real value will be above -1000
@@ -305,18 +309,18 @@ function load_elevation(filename, demrsc::DemRsc; do_permute=true)
 end
 
 
-function load_complex(filename::AbstractString, demrsc::DemRsc; do_permute=true)
+function load_complex(filename::AbstractString, demrsc::DemRsc; do_permute = true)
     return _load_bin_matrix(filename, demrsc, ComplexF32, do_permute)
 end
 
-function load_bool(filename::AbstractString, demrsc::DemRsc; do_permute=true)
+function load_bool(filename::AbstractString, demrsc::DemRsc; do_permute = true)
     return _load_bin_matrix(filename, demrsc, Bool, do_permute)
 end
 
 function _load_bin_matrix(filename, demrsc::DemRsc, dtype, do_permute::Bool)
     @unpack rows, cols = demrsc
     # Note: must be saved in c/row-major order, so loading needs a transpose
-    out = Array{dtype, 2}(undef, (cols, rows))
+    out = Array{dtype,2}(undef, (cols, rows))
 
     read!(filename, out)
     return do_permute ? permutedims(out) : out
@@ -333,32 +337,32 @@ are the first matrix, next "cols" are second, etc.
 For .unw height files, the first is amplitude, second is phase (unwrapped)
 For .cc correlation files, first is amp, second is correlation (0 to 1)
 """
-function load_stacked_img(filename::AbstractString, demrsc::DemRsc; do_permute=true, return_amp=false)
+function load_stacked_img(filename::AbstractString, demrsc::DemRsc; do_permute = true, return_amp = false)
     @unpack rows, cols = demrsc
     # Note: must be saved in c/row-major order, so loading needs a transpose
     # out_left usually is amplitude data
     # Usually we are interested in out_right
     #
     # First make container for all of data
-    out = Array{Float32, 2}(undef, (2cols, rows))
+    out = Array{Float32,2}(undef, (2cols, rows))
     read!(filename, out)
 
     out_amp = @view out[1:cols, :]
-    out_data = @view out[cols+1:end, :]
+    out_data = @view out[cols + 1:end, :]
 
     if return_amp
-        return do_permute ? permutedims(cat(out_amp, out_data, dims=3), (2, 1, 3)) : cat(out_amp, out_data, dims=3)
+        return do_permute ? permutedims(cat(out_amp, out_data, dims = 3), (2, 1, 3)) : cat(out_amp, out_data, dims = 3)
     else
         return do_permute ? permutedims(out_data) : out_data
     end
 end
 
-function load_geolist_from_h5(h5file::AbstractString; geolist_dset=GEOLIST_DSET)
+function load_geolist_from_h5(h5file::AbstractString; geolist_dset = GEOLIST_DSET)
     geo_strings = h5read(h5file, geolist_dset)
     return parse_geolist_strings(geo_strings)
 end
 
-function load_geolist_from_h5(h5file::AbstractString, dset::AbstractString; geolist_dset=GEOLIST_DSET)
+function load_geolist_from_h5(h5file::AbstractString, dset::AbstractString; geolist_dset = GEOLIST_DSET)
     geo_strings = h5readattr(h5file, dset)[geolist_dset]
     return parse_geolist_strings(geo_strings)
 end
@@ -378,7 +382,7 @@ end
 
 _parse(datestr) = Date(datestr, DATE_FMT)
 
-function parse_intlist_strings(date_pairs::AbstractArray{<:AbstractString, 1})
+function parse_intlist_strings(date_pairs::AbstractArray{<:AbstractString,1})
     # For passing list of filenames ["20150101_20160101.int", ...]
     # `collect` used to make into an array of chars for strip
     date_pairs = [split(strip(d, collect(".int")), "_")[1:2] for d in date_pairs]
@@ -392,20 +396,20 @@ parse_geolist_strings(geolist_str::AbstractArray{String}) = _parse.(geolist_str)
 
 
 import Base.string
-string(arr::AbstractArray{Date}, fmt="yyyymmdd") = Dates.format.(arr, fmt)
-string(arr::AbstractArray{Tuple{Date, Date}}, fmt="yyyymmdd") = [Dates.format.(tup, fmt) for tup in arr]
+string(arr::AbstractArray{Date}, fmt = "yyyymmdd") = Dates.format.(arr, fmt)
+string(arr::AbstractArray{Tuple{Date,Date}}, fmt = "yyyymmdd") = [Dates.format.(tup, fmt) for tup in arr]
 
 """
     save_geolist_to_h5(h5file::String, geolist::AbstractArray{Date}; overwrite=false)
 
 Save the geolist as a list of strings to an dataset `h5file`"""
-function save_geolist_to_h5(h5file::String, geolist::AbstractArray{Date}; overwrite=false)
+function save_geolist_to_h5(h5file::String, geolist::AbstractArray{Date}; overwrite = false)
     !check_dset(h5file, GEOLIST_DSET, overwrite) && return
     h5write(h5file, GEOLIST_DSET, string(geolist))
 end
 
 """In this version, save the geolist to an attribute of `object` already in `h5file`"""
-function save_geolist_to_h5(h5file::String, object::String, geolist::AbstractArray{Date}; overwrite=false)
+function save_geolist_to_h5(h5file::String, object::String, geolist::AbstractArray{Date}; overwrite = false)
     h5open(h5file, "cw") do f
         obj = f[object]
         # Delete if exists
@@ -415,26 +419,26 @@ function save_geolist_to_h5(h5file::String, object::String, geolist::AbstractArr
         attrs(obj)[GEOLIST_DSET] = string(geolist)
     end
 end
-
+    
 """Save the geolist as a list of strings to an dataset `h5file`"""
-function save_intlist_to_h5(h5file::String, intlist::AbstractArray{Tuple{Date, Date}}; overwrite=false)
+function save_intlist_to_h5(h5file::String, intlist::AbstractArray{Tuple{Date,Date}}; overwrite = false)
     !check_dset(h5file, INTLIST_DSET, overwrite) && return
     h5write(h5file, INTLIST_DSET, _intlist_to_strings(intlist))
 end
 # 
-_intlist_to_strings(intlist::AbstractArray{Tuple{Date, Date}})::AbstractArray{String, 2} = hcat([collect(tup) for tup in string(intlist)]...)
+_intlist_to_strings(intlist::AbstractArray{Tuple{Date,Date}})::AbstractArray{String,2} = hcat([collect(tup) for tup in string(intlist)]...)
 
 # In HDF5, DemRscs are stored as JSON dicts
-load_dem_from_h5(h5file, dset=DEM_RSC_DSET) = DemRsc(JSON.parse(h5read(h5file, dset)))
+load_dem_from_h5(h5file, dset = DEM_RSC_DSET) = DemRsc(JSON.parse(h5read(h5file, dset)))
 
-function save_dem_to_h5(h5file, demrsc::DemRsc, dset_name=DEM_RSC_DSET; overwrite=true)
+function save_dem_to_h5(h5file, demrsc::DemRsc, dset_name = DEM_RSC_DSET; overwrite = true)
     !check_dset(h5file, dset_name, overwrite) && return
     h5write(h5file, dset_name, JSON.json(demrsc))
 end
 # TODO:
 # save_dem_to_h5(h5file, demrsc::DemRsc, dset_name=DEM_RSC_DSET; overwrite=true)
 
-function save_hdf5_stack(h5file::AbstractString, dset_name::AbstractString, stack; overwrite::Bool=false, do_permute=true)
+function save_hdf5_stack(h5file::AbstractString, dset_name::AbstractString, stack; overwrite::Bool = false, do_permute = true)
     # TODO: is there a way to combine this with normal saving of files?
     mode = overwrite ? "w" : "cw"  # Append mode is 'cw'  (why different than "a"?) 
     h5open(h5file, mode) do f 
@@ -443,21 +447,21 @@ function save_hdf5_stack(h5file::AbstractString, dset_name::AbstractString, stac
     end
 end
 
-"""Wrapper around h5read to account for the transpose
+    """Wrapper around h5read to account for the transpose
 necessary when reading from python-written stacks
 """
-function load_hdf5_stack(h5file::AbstractString, dset_name::AbstractString; do_permute=true)
+function load_hdf5_stack(h5file::AbstractString, dset_name::AbstractString; do_permute = true)
     h5open(h5file) do f
         return do_permute ? permutedims(read(f[dset_name]), (2, 1, 3)) : read(f[dset_name])
     end
 end
 
 # If loading only certain layers, don't read all into memory
-function load_hdf5_stack(h5file::AbstractString, dset_name::AbstractString, valid_layer_idxs; do_permute=true)
+function load_hdf5_stack(h5file::AbstractString, dset_name::AbstractString, valid_layer_idxs; do_permute = true)
     nrows, ncols, _ = size(h5file, dset_name)
     h5open(h5file) do f
         dset = f[dset_name]
-        out = Array{eltype(dset), ndims(dset)}(undef, (nrows, ncols, length(valid_layer_idxs)))
+        out = Array{eltype(dset),ndims(dset)}(undef, (nrows, ncols, length(valid_layer_idxs)))
         for (tot_idx, v_idx) in enumerate(valid_layer_idxs)
             out[:, :, tot_idx] = dset[:, :, v_idx]
         end
@@ -479,10 +483,10 @@ function sum_hdf5_stack(h5file::AbstractString, dset_name::AbstractString, valid
         end
     end
     return out
-end
+    end
 
 """Get the composite mask from the stack, true only where ALL pixels are masked"""
-function load_mask(geolist::AbstractArray{Date, 1}; do_permute::Bool=true, fname="masks.h5", dset_name="geo")
+function load_mask(geolist::AbstractArray{Date,1}; do_permute::Bool = true, fname = "masks.h5", dset_name = "geo")
     geolist_full = load_geolist_from_h5(fname)
     idxs = indexin(geolist, geolist_full)
     out = convert(Array{Bool}, sum_hdf5_stack(fname, dset_name, idxs) .> 0)
@@ -493,7 +497,7 @@ end
 # the geo_sum will be 0 on half, 1 on half. if we ignore that date... this still
 # says "it equals the maximum of the sum, so it's masked
 """Get the composite mask from the stack, true only where ALL pixels are masked"""
-function load_mask(;do_permute::Bool=true, fname="masks.h5", dset="geo_sum")
+function load_mask(;do_permute::Bool = true, fname = "masks.h5", dset = "geo_sum")
     mask = h5read(fname, dset)
     mval = max(1, maximum(mask))  # Make sure we dont mask all 0s
     return do_permute ? permutedims(mask .== mval) : mask .== mval
@@ -523,9 +527,9 @@ end
 
 # TODO: probably a better way to do this.. but can't figure out how to
 # without allocating so many arrays that it's slow as Python
-function load_stack(; file_list::Union{AbstractArray{AbstractString}, Nothing}=nothing, 
-                    directory::Union{AbstractString, Nothing}=nothing,
-                    file_ext::Union{AbstractString, Nothing}=nothing)
+function load_stack(; file_list::Union{AbstractArray{AbstractString},Nothing} = nothing, 
+                    directory::Union{AbstractString,Nothing} = nothing,
+                    file_ext::Union{AbstractString,Nothing} = nothing)
     if isnothing(file_list)
         file_list = find_files(file_ext, directory)
     end
@@ -545,26 +549,26 @@ function load_stack(; file_list::Union{AbstractArray{AbstractString}, Nothing}=n
 end
 
 # Using multiple dispatch to avoid if statements for 2 types of images
-function _return_array(T::Union{Type{ComplexF32}, Type{Bool}}, rows::Int, cols::Int, file_len::Int)
-    stack = Array{T, 3}(undef, (cols, rows, file_len))
-    buffer = Array{T, 2}(undef, (cols, rows))
+function _return_array(T::Union{Type{ComplexF32},Type{Bool}}, rows::Int, cols::Int, file_len::Int)
+    stack = Array{T,3}(undef, (cols, rows, file_len))
+    buffer = Array{T,2}(undef, (cols, rows))
     stack, buffer
-end
+    end
 
 function _return_array(T::Type{Float32}, rows::Int, cols::Int, file_len::Int)
-    stack = Array{T, 3}(undef, (2cols, rows, file_len))
-    buffer = Array{T, 2}(undef, (2cols, rows))
+    stack = Array{T,3}(undef, (2cols, rows, file_len))
+    buffer = Array{T,2}(undef, (2cols, rows))
     stack, buffer
-end
+    end
 
 # For normal .int, .geo complex/ masks, just transpose stack
-function _permute(stack::AbstractArray{T, 3}, cols::Int) where {T <: Number}
+function _permute(stack::AbstractArray{T,3}, cols::Int) where {T <: Number}
     return permutedims(stack, (2, 1, 3))
 end
 
 # For normal weird stacked types, pick just the right half
-function _permute(stack::AbstractArray{Float32, 3}, cols::Int)
-    return permutedims(stack[cols+1:end, :, :], (2, 1, 3))
+function _permute(stack::AbstractArray{Float32,3}, cols::Int)
+    return permutedims(stack[cols + 1:end, :, :], (2, 1, 3))
 end
 
 
@@ -605,15 +609,15 @@ For stacked files, the expected format of `array` is a 3D stack with
 `array[:,:,1]` being the amplitude image, `array[:,:,2]` being the data.
 If only a 2D image is passed, an dummy amplitude image of all 1s is made.
 """
-function save(filename::AbstractString, array; do_permute=true, kwargs...)
+function save(filename::AbstractString, array; do_permute = true, kwargs...)
     ext = get_file_ext(filename)
 
     if ext == ".rsc"
         write(filename, string(array))  # array here should be a DemRsc
     elseif ext in BOOL_EXTS
-        tofile(filename, array, do_permute=do_permute)
+        tofile(filename, array, do_permute = do_permute)
     elseif (ext in vcat(COMPLEX_EXTS, REAL_EXTS, ELEVATION_EXTS)) && (!(ext in STACKED_EXTS))
-        tofile(filename, _force_float32(array), do_permute=do_permute)
+        tofile(filename, _force_float32(array), do_permute = do_permute)
     elseif ext in STACKED_EXTS
         # ndims(array) != 3 && throw(DimensionMismatch("array must be 3D [amp; data] to save as $filename"))
         if ndims(array) == 3
@@ -626,13 +630,13 @@ function save(filename::AbstractString, array; do_permute=true, kwargs...)
         end
         # Handle the permuting for stacked here outside of function
         out = do_permute ? transpose(hcat(amp, data)) : vcat(amp, data)
-        tofile(filename, _force_float32(out), do_permute=false)
+        tofile(filename, _force_float32(out), do_permute = false)
     else
         error("Filetype not implemented: $filename")
     end
 end
 
-function tofile(filename, array; do_permute=true)  #, overwrite=true)
+function tofile(filename, array; do_permute = true)  # , overwrite=true)
     # mode = overwrite ? "w" : "a"
     mode = "w"
     open(filename, mode) do f 
@@ -664,7 +668,7 @@ function take_looks(image::AbstractArray{T}, row_looks, col_looks) where {T <: N
 
     if ndims(image) > 2
         return cat((take_looks(image[:, :, i], row_looks, col_looks)
-                    for i in 1:size(image, 3))..., dims=3)
+                    for i in 1:size(image, 3))..., dims = 3)
     end
 
     nrows, ncols = size(image)
@@ -684,7 +688,7 @@ function take_looks(image::AbstractArray{T}, row_looks, col_looks) where {T <: N
     return take_looks!(out, image, row_looks, col_looks)
 end
 
-function take_looks!(out::AbstractArray{S}, image::AbstractArray{T}, row_looks, col_looks) where {S, T <: Number}
+function take_looks!(out::AbstractArray{S}, image::AbstractArray{T}, row_looks, col_looks) where {S,T <: Number}
     # Check that output is compatible
     nrows, ncols = size(image)
     nr = div(nrows, row_looks)
@@ -695,11 +699,11 @@ function take_looks!(out::AbstractArray{S}, image::AbstractArray{T}, row_looks, 
     return take_looks!(out, image, row_looks, col_looks, nr, nc)
 end
 
-function take_looks!(out::AbstractArray{S}, image::AbstractArray{T}, row_looks, col_looks, nr, nc) where {S, T <: Number}
+function take_looks!(out::AbstractArray{S}, image::AbstractArray{T}, row_looks, col_looks, nr, nc) where {S,T <: Number}
     @inbounds Threads.@threads for j = 1:nc
         @inbounds for i = 1:nr
-            indx_i = 1+(i-1)*row_looks:i*row_looks
-            indx_j = 1+(j-1)*col_looks:j*col_looks
+            indx_i = 1 + (i - 1) * row_looks:i * row_looks
+            indx_j = 1 + (j - 1) * col_looks:j * col_looks
             @views out[i, j] = sum(image[indx_i, indx_j])
         end
     end
@@ -720,8 +724,8 @@ function take_looks(demrsc::DemRsc, row_looks, col_looks)
     newc = div(ncols, col_looks)
     new_x_step = demrsc.x_step * col_looks
     new_y_step = demrsc.y_step * row_looks
-    return DemRsc(demrsc, file_length=newr, rows=newr, y_step=new_y_step,
-                  width=newc, cols=newc, x_step=new_x_step)
+    return DemRsc(demrsc, file_length = newr, rows = newr, y_step = new_y_step,
+                  width = newc, cols = newc, x_step = new_x_step)
 end
 
 # If we pass anything else:
@@ -745,7 +749,7 @@ Returns:
     tuple(date, date) of (early, late) dates for all igrams (if parse=True)
         if parse=False: returns list[str], filenames of the igrams
 """
-function find_igrams(;directory::AbstractString=".", parse::Bool=true, filename::AbstractString="")
+function find_igrams(;directory::AbstractString = ".", parse::Bool = true, filename::AbstractString = "")
     igram_file_list = isempty(filename) ? find_files("*.int", directory) : readlines(filename)
     intlist_strings = [splitpath(fname)[end] for fname in igram_file_list]
     isempty(intlist_strings) && return intlist_strings
@@ -767,7 +771,7 @@ Returns:
 
 """
 # TODO: parsers.Sentinel...
-function find_geos(;directory::AbstractString=".", parse::Bool=true, filename::AbstractString="")
+function find_geos(;directory::AbstractString = ".", parse::Bool = true, filename::AbstractString = "")
     geo_file_list = isempty(filename) ? find_files("*.geo", directory) : readlines(filename)
 
     !parse && return geo_file_list
@@ -789,7 +793,7 @@ end
 
 
 """Leaves just date from format S1A_YYYYmmdd.geo"""
-_strip_geoname(name) = reduce(replace, ["S1A_" => "", "S1B_" => "", ".geo" => ""], init=name)
+_strip_geoname(name) = reduce(replace, ["S1A_" => "", "S1B_" => "", ".geo" => ""], init = name)
 
 
 end # module
